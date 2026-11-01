@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>95s PRIDE | 1995年生まれが、次の時代をつくる。</title>
+  <meta name="description" content="95s PRIDEは1995年生まれのコミュニティ。経験・知識・技術・時間・人脈・情熱を持ち寄り、同世代のため、地域のため、次の世代のために動きます。">
+  <meta name="theme-color" content="#2E6B5A">
+
+  <!-- OGP -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="95s PRIDE">
+  <meta property="og:title" content="95s PRIDE | 1995年生まれが、次の時代をつくる。">
+  <meta property="og:description" content="1995年生まれのコミュニティ。CONNECTING OUR GENERATION SINCE 1995">
+  <meta property="og:image" content="assets/logo.png">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+
+  <link rel="icon" type="image/svg+xml" href="assets/logo-mark.svg">
+  <link rel="apple-touch-icon" href="assets/logo.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== ローディング演出 ===== -->
+  <div class="loader" id="loader" aria-hidden="true">
+    <div class="loader__ring">
+      <img class="loader__logo" id="loaderLogo" src="assets/logo.svg" alt="" width="360" height="360">
+      <svg class="loader__svg" viewBox="0 0 120 120" width="260" height="260" aria-hidden="true">
+        <defs>
+          <linearGradient id="loaderGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#E9CB80"/>
+            <stop offset="0.5" stop-color="#CDA962"/>
+            <stop offset="1" stop-color="#3F9277"/>
+          </linearGradient>
+        </defs>
+        <circle class="loader__track" cx="60" cy="60" r="54"/>
+        <circle class="loader__bar" id="loaderBar" cx="60" cy="60" r="54"/>
+      </svg>
+    </div>
+    <span class="loader__count" id="loaderCount">0%</span>
+  </div>
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="header" id="header">
+    <div class="container header__inner">
+      <a href="#top" class="header__brand" aria-label="95s PRIDE トップへ">
+        <img src="assets/logo-mark.svg" alt="" width="40" height="40">
+        <span>95s PRIDE</span>
+      </a>
+      <button class="header__toggle" id="navToggle" aria-expanded="false" aria-controls="nav" aria-label="メニューを開く">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="nav" id="nav">
+        <ul class="nav__list">
+          <li><a href="#about">理念</a></li>
+          <li><a href="#pride">5つの価値観</a></li>
+          <li><a href="#activities">活動・お知らせ</a></li>
+          <li><a href="#members">個人活動</a></li>
+          <li><a href="/members">メンバー</a></li>
+          <li><a href="#sponsors">協賛企業</a></li>
+          <li><a href="#join">参加案内</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ===== ヒーロー ===== -->
+    <section class="hero">
+      <div class="hero__pixels" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="container hero__inner">
+        <img class="hero__logo hero__in" src="assets/logo.svg" alt="95s PRIDE ロゴ" width="420" height="420" fetchpriority="high">
+        <h1 class="hero__title hero__in">1995年生まれが、<br><em>次の時代</em>をつくる。</h1>
+        <p class="hero__sub hero__in"><span class="hero__sub-text">CONNECTING OUR GENERATION SINCE</span> <span class="hero__sub-year">1995</span></p>
+        <div class="hero__actions hero__in">
+          <a href="#join" class="btn btn--primary">参加案内を見る</a>
+          <a href="#about" class="btn btn--ghost">理念を読む</a>
+        </div>
+      </div>
+      <div class="hero__scroll" aria-hidden="true">SCROLL</div>
+    </section>
+
+    <!-- 流れるテキスト帯 -->
+    <div class="ticker" aria-hidden="true">
+      <div class="ticker__track">
+        <span>95s PRIDE</span><i></i><span>CONNECTING OUR GENERATION</span><i></i><span>SINCE 1995</span><i></i>
+        <span>95s PRIDE</span><i></i><span>CONNECTING OUR GENERATION</span><i></i><span>SINCE 1995</span><i></i>
+        <span>95s PRIDE</span><i></i><span>CONNECTING OUR GENERATION</span><i></i><span>SINCE 1995</span><i></i>
+        <span>95s PRIDE</span><i></i><span>CONNECTING OUR GENERATION</span><i></i><span>SINCE 1995</span><i></i>
+      </div>
+    </div>
+
+    <!-- ===== 理念 ===== -->
+    <section class="section about" id="about">
+      <div class="about__year" aria-hidden="true">1995</div>
+      <div class="container">
+        <header class="section__head reveal">
+          <p class="section__eyebrow">ABOUT</p>
+          <h2 class="section__title">理念</h2>
+          <div class="section__bar"></div>
+        </header>
+        <div class="statement">
+          <p class="reveal">1995年に生まれた。</p>
+          <p class="reveal">良いことも、悪いこともあった。</p>
+          <p class="reveal">時代は変わり、社会も変わった。</p>
+          <p class="reveal">そして今、僕たちは30代になった。</p>
+          <p class="reveal statement__gap">経営者も、会社員も、個人事業主も、</p>
+          <p class="reveal">子育てをしている人も、今悩んでいる人も。</p>
+          <p class="reveal">立場は違っても、1995年生まれという共通点がある。</p>
+          <p class="reveal statement__gap">一人ひとりが持つ経験、知識、技術、時間、人脈、情熱。</p>
+          <p class="reveal">それらを持ち寄れば、一人ではできないこともできる。</p>
+          <p class="reveal statement__gap">自分たちのためだけではなく、</p>
+          <p class="reveal">同世代のために。地域のために。次の世代のために。</p>
+          <p class="reveal statement__gap"><span class="statement__last">1995年生まれだからこそできることを。</span></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PRIDE ===== -->
+    <section class="section pride" id="pride">
+      <div class="container">
+        <header class="section__head section__head--light reveal">
+          <p class="section__eyebrow">PRIDE</p>
+          <h2 class="section__title">5つの価値観</h2>
+          <div class="section__bar"></div>
+          <p class="section__lead">「PRIDE」の5文字に、私たちが大切にする姿勢を込めています。</p>
+        </header>
+        <ul class="pride__grid">
+          <li class="pride-card reveal">
+            <span class="pride-card__letter">P</span>
+            <p class="pride-card__en">Passion</p>
+            <h3 class="pride-card__ja">情熱</h3>
+            <p class="pride-card__text">自分の可能性を信じ、情熱を持って挑戦する。</p>
+          </li>
+          <li class="pride-card reveal">
+            <span class="pride-card__letter">R</span>
+            <p class="pride-card__en">Resilience</p>
+            <h3 class="pride-card__ja">逆境から立ち上がる力</h3>
+            <p class="pride-card__text">うまくいかない時も、失敗や困難を経験に変えて前に進む。</p>
+          </li>
+          <li class="pride-card reveal">
+            <span class="pride-card__letter">I</span>
+            <p class="pride-card__en">Innovation</p>
+            <h3 class="pride-card__ja">革新</h3>
+            <p class="pride-card__text">当たり前にとらわれず、新しい価値を生み出す。</p>
+          </li>
+          <li class="pride-card reveal">
+            <span class="pride-card__letter">D</span>
+            <p class="pride-card__en">Diversity</p>
+            <h3 class="pride-card__ja">多様性</h3>
+            <p class="pride-card__text">立場、職業、環境、価値観の違いを認め、一人ひとりの力を尊重する。</p>
+          </li>
+          <li class="pride-card reveal">
+            <span class="pride-card__letter">E</span>
+            <p class="pride-card__en">Evolution</p>
+            <h3 class="pride-card__ja">進化</h3>
+            <p class="pride-card__text">自分たちだけでなく、社会と次の世代とともに成長し続ける。</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===== 活動・お知らせ ===== -->
+    <section class="section activities" id="activities">
+      <div class="container">
+        <header class="section__head reveal">
+          <p class="section__eyebrow">ACTIVITIES / NEWS</p>
+          <h2 class="section__title">活動・お知らせ</h2>
+          <div class="section__bar"></div>
+        </header>
+
+        <!--
+          お知らせは <article class="news-card"> を1件として追加・削除してください。
+          data-category に「お知らせ」「イベント」「レポート」などを入れるとラベルに表示されます。
+        -->
+        <div class="news__grid">
+          <article class="news-card news-card--event news-card--radio reveal">
+            <div class="news-card__head">
+              <span class="news-card__date">ON AIR</span>
+              <span class="news-card__cat">活動</span>
+            </div>
+            <figure class="news-card__figure">
+              <img src="assets/standfm-yuuri.jpg" alt="95s PRIDE | ゆーりチャンネル(stand.fm)" width="688" height="245" loading="lazy">
+            </figure>
+            <div class="news-card__body">
+              <h3 class="news-card__title">音声配信「95s PRIDE | ゆーりチャンネル」</h3>
+              <p class="news-card__text">95s PRIDEアンバサダーのゆーりが、stand.fmで活動日誌を配信中。「95s PRIDEって何?」「1995年生まれで何ができる?」という疑問に答えながら、日々前に進んでいる活動の裏側を、肩の力を抜いた声でお届けします。不定期更新です。気になった方は『いいね』『フォロー』で見守ってください。</p>
+              <a class="btn btn--primary news-card__btn" href="https://stand.fm/episodes/6abd84258e214efe9a9ba4d5" target="_blank" rel="noopener noreferrer">stand.fmで聴く</a>
+            </div>
+          </article>
+          <article class="news-card news-card--event reveal">
+            <div class="news-card__head">
+              <span class="news-card__date">2026.10.04 20:00</span>
+              <span class="news-card__cat">イベント</span>
+            </div>
+            <h3 class="news-card__title news-card__title--top">AIオンライン講座「プロンプトエンジニアリング入門」</h3>
+            <figure class="news-card__figure">
+              <img src="assets/seminar-prompt-20261004.jpg" alt="プロンプトエンジニアリング入門 AIへの指示を「なんとなく」から「型」へ" width="1462" height="816" loading="lazy">
+            </figure>
+            <div class="news-card__body">
+              <p class="news-card__text">AIスクールの立ち上げに携わった95s PRIDEメンバーのワケトンが講師を務める、約30分のオンライン講座です。「AIに頼んでも、思った答えが返ってこない」という悩みを、指示の「型」で解決します。5つの要素とテクニックを学び、自分の仕事を題材にその場で実践。持ち帰りテンプレート付きで、明日からすぐ使えます。</p>
+              <p class="news-card__text news-card__note">＼参加無料・途中入退出OK／</p>
+              <a class="btn btn--primary news-card__btn" href="https://meet.google.com/zxn-unkr-hov" target="_blank" rel="noopener noreferrer">オンラインリンクはこちら</a>
+            </div>
+          </article>
+          <article class="news-card news-card--event reveal">
+            <div class="news-card__head">
+              <span class="news-card__date">2026.09.29</span>
+              <span class="news-card__cat">活動実績</span>
+            </div>
+            <figure class="news-card__figure">
+              <img src="assets/report-seminar-20260929.jpg" alt="懸賞のコツ講座 オンライン開催の様子" width="1280" height="720" loading="lazy">
+            </figure>
+            <div class="news-card__body">
+              <h3 class="news-card__title">懸賞のコツ講座(オンライン)を開催しました</h3>
+              <p class="news-card__text">9月29日(火)21時より、95s PRIDE初の企画としてオンライン講座「懸賞のコツ講座」をZoomで開催しました。登壇者は懸賞歴20年のメンバー・あつ。応募先の選び方からハガキ・Webそれぞれの書き方、当選率を上げる工夫まで、20年の経験で培った「当たるコツ」を参加者の皆さんにお伝えしました。1995年生まれ同士が知識を持ち寄り、同世代に役立てる。95s PRIDEが目指す活動の第一歩となりました。</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 個人活動(メンバー一覧はログイン制の members.html) ===== -->
+    <section class="section members" id="members">
+      <div class="container">
+        <header class="section__head reveal">
+          <p class="section__eyebrow">ACTIVITIES</p>
+          <h2 class="section__title">個人活動</h2>
+          <div class="section__bar"></div>
+        </header>
+
+        <!--
+          個人活動:カテゴリーごとに <div class="members__category"> を追加してください。
+          テキストのみは <a class="member-link">、画像付きは <a class="sponsor-card"> を使います。
+        -->
+        <div class="members__block reveal">
+          <div class="members__category">
+            <h4 class="members__cat">写真家・画家</h4>
+            <ul class="sponsors__list">
+              <li>
+                <a class="member-link" href="https://www.instagram.com/yuu_photo18?stkn=MWRxOHU0eGRyNDVteg==" target="_blank" rel="noopener noreferrer">
+                  <span class="member-link__name">yuu nishikawa</span>
+                  <img class="member-link__icon" src="assets/instagram.png" alt="Instagram" width="96" height="96" loading="lazy">
+                </a>
+              </li>
+              <li>
+                <a class="sponsor-card" href="https://www.instagram.com/inkart_with?stkn=dnd5eGJmZnhmaGow&amp;utm_source=qr" target="_blank" rel="noopener noreferrer" aria-label="Atelier with(Instagram)">
+                  <img src="assets/sponsor-atelier-with.jpg" alt="Atelier with" width="640" height="640" loading="lazy">
+                  <span class="sponsor-card__name">Atelier <span class="nowrap">with<img class="member-link__icon" src="assets/instagram.png" alt="Instagram" width="96" height="96" loading="lazy"></span></span>
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div class="members__category">
+            <h4 class="members__cat">飲食</h4>
+            <ul class="sponsors__list">
+              <li>
+                <a class="sponsor-card" href="https://www.instagram.com/toridomatoubunerima?stkn=ODBycGlub2d0b3Vs&amp;utm_source=qr" target="_blank" rel="noopener noreferrer" aria-label="鶏酒場 鶏土間(Instagram)">
+                  <img src="assets/shop-toridoma.jpg" alt="鶏酒場 鶏土間" width="640" height="640" loading="lazy">
+                  <span class="sponsor-card__name">鶏酒場 <span class="nowrap">鶏土間<img class="member-link__icon" src="assets/instagram.png" alt="Instagram" width="96" height="96" loading="lazy"></span></span>
+                </a>
+              </li>
+              <li>
+                <a class="sponsor-card" href="https://www.instagram.com/ajito.touneri?stkn=MWF0bHgzaXg5MnNkeg%3D%3D&amp;utm_source=qr" target="_blank" rel="noopener noreferrer" aria-label="おとなの隠れ家bar 味研(Instagram)">
+                  <img src="assets/shop-ajiken.jpg" alt="おとなの隠れ家bar 味研" width="640" height="640" loading="lazy">
+                  <span class="sponsor-card__name">おとなの隠れ家bar <span class="nowrap">味研<img class="member-link__icon" src="assets/instagram.png" alt="Instagram" width="96" height="96" loading="lazy"></span></span>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 協賛企業 ===== -->
+    <section class="section sponsors" id="sponsors">
+      <div class="container">
+        <header class="section__head reveal">
+          <p class="section__eyebrow">SPONSORS</p>
+          <h2 class="section__title">協賛企業</h2>
+          <div class="section__bar"></div>
+        </header>
+        <!-- 協賛企業が決まったら <div class="sponsors__recruit"> の上に <ul class="sponsors__list"> を追加してください -->
+        <div class="members__block reveal">
+          <div class="sponsors__recruit">
+            <p class="sponsors__recruit-title">協賛企業 募集中</p>
+            <p class="sponsors__recruit-text">95s PRIDEの活動に共感いただける企業・団体を募集しています。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 参加案内 ===== -->
+    <section class="section join" id="join">
+      <div class="container">
+        <header class="section__head section__head--light reveal">
+          <p class="section__eyebrow">JOIN</p>
+          <h2 class="section__title">参加案内</h2>
+          <div class="section__bar"></div>
+        </header>
+        <div class="join__body reveal">
+          <p class="join__lead">1995年生まれであれば、どなたでも参加できます。<br>立場や職業、住んでいる場所は問いません。</p>
+          <dl class="join__list">
+            <div>
+              <dt>対象</dt>
+              <dd>1995年4月2日〜1996年4月1日生まれの方</dd>
+            </div>
+            <div>
+              <dt>活動内容</dt>
+              <dd>同世代の交流会、地域活動、次の世代へ向けた取り組み</dd>
+            </div>
+            <div>
+              <dt>参加費</dt>
+              <dd>無料(イベントごとに実費をいただく場合があります)</dd>
+            </div>
+          </dl>
+          <!-- 参加方法の案内文はここを書き換えてください -->
+          <p class="join__note">参加方法の詳細は、オープンチャットよりお問い合わせください</p>
+          <a class="line-btn" href="https://line.me/ti/g2/GWej9uUo3gOGChZic1QZzqyoOpXh5F8uxvwuVw?utm_source=invitation&amp;utm_medium=link_copy&amp;utm_campaign=default" target="_blank" rel="noopener noreferrer">
+            <img class="line-btn__icon" src="assets/LINE_Brand_icon.png" alt="" width="40" height="40">
+            <span class="line-btn__label">『95s PRIDE』オープンチャット</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== フッター ===== -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <img class="footer__logo" src="assets/logo.svg" alt="95s PRIDE" width="120" height="120" loading="lazy">
+      <p class="footer__tag">CONNECTING OUR GENERATION SINCE 1995</p>
+      <p class="footer__copy">&copy; 2026 95s PRIDE</p>
+    </div>
+  </footer>
+
+  <!-- ===== 追従LINEボタン ===== -->
+  <a class="line-btn line-btn--float" href="https://line.me/ti/g2/GWej9uUo3gOGChZic1QZzqyoOpXh5F8uxvwuVw?utm_source=invitation&amp;utm_medium=link_copy&amp;utm_campaign=default" target="_blank" rel="noopener noreferrer" aria-label="『95s PRIDE』オープンチャットに参加">
+    <img class="line-btn__icon" src="assets/LINE_Brand_icon.png" alt="" width="40" height="40">
+    <span class="line-btn__label">『95s PRIDE』オープンチャット</span>
+  </a>
+
+  <script src="js/main.js" defer></script>
+</body>
+</html>

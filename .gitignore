@@ -1,0 +1,4 @@
+.vercel
+.env*
+YouTube編集/
+.claude/settings.local.json

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "ClaudeInChromeDomain(95s-pride.vercel.app)"
+    ]
+  }
+}

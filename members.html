@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>メンバー | 95s PRIDE</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2E6B5A">
+
+  <link rel="icon" type="image/svg+xml" href="assets/logo-mark.svg">
+  <link rel="apple-touch-icon" href="assets/logo.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="header header--solid" id="header">
+    <div class="container header__inner">
+      <a href="/" class="header__brand" aria-label="95s PRIDE トップへ">
+        <img src="assets/logo-mark.svg" alt="" width="40" height="40">
+        <span>95s PRIDE</span>
+      </a>
+      <button class="header__toggle" id="navToggle" aria-expanded="false" aria-controls="nav" aria-label="メニューを開く">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="nav" id="nav">
+        <ul class="nav__list">
+          <li><a href="/#about">理念</a></li>
+          <li><a href="/#pride">5つの価値観</a></li>
+          <li><a href="/#activities">活動・お知らせ</a></li>
+          <li><a href="/#members">個人活動</a></li>
+          <li><a href="/members" aria-current="page">メンバー</a></li>
+          <li><a href="/#sponsors">協賛企業</a></li>
+          <li><a href="/#join">参加案内</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section members member-page">
+      <div class="container">
+        <header class="section__head">
+          <p class="section__eyebrow">MEMBERS</p>
+          <h1 class="section__title">メンバー</h1>
+          <div class="section__bar"></div>
+        </header>
+
+        <p class="member-page__loading" id="memberLoading">読み込み中です</p>
+
+        <!-- ログイン前の表示 -->
+        <div class="login-card" id="memberLogin" hidden>
+          <form id="emailForm">
+            <p class="login-card__lead">メールアドレスとパスワードを入力してください。はじめての方は、新規会員登録からパスワードを設定してください。</p>
+            <label class="login-card__label" for="loginEmail">メールアドレス</label>
+            <input class="login-card__input" id="loginEmail" type="email" autocomplete="username" required>
+            <label class="login-card__label login-card__label--next" for="loginPassword">パスワード</label>
+            <input class="login-card__input" id="loginPassword" type="password" autocomplete="current-password" required>
+            <button class="btn btn--primary login-card__btn" type="submit">ログイン</button>
+            <button class="login-card__back" id="showRegister" type="button">はじめての方は新規会員登録</button>
+            <button class="login-card__back" id="showReset" type="button">パスワードを忘れた方</button>
+          </form>
+
+          <form id="registerForm" hidden>
+            <p class="login-card__lead">名前・メールアドレス・パスワードを入力してください。メールアドレスの確認のため、確認コードをお送りします。</p>
+            <label class="login-card__label" for="registerName">名前(ニックネーム可)</label>
+            <input class="login-card__input" id="registerName" type="text" maxlength="50" autocomplete="nickname" required>
+            <label class="login-card__label login-card__label--next" for="registerEmail">メールアドレス</label>
+            <input class="login-card__input" id="registerEmail" type="email" autocomplete="username" required>
+            <label class="login-card__label login-card__label--next" for="registerPassword">パスワード(8文字以上)</label>
+            <input class="login-card__input" id="registerPassword" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+            <button class="btn btn--primary login-card__btn" type="submit">確認コードを送る</button>
+            <button class="login-card__back" id="showLogin" type="button">登録済みの方はログイン</button>
+            <p class="login-card__note">ご入力の情報は、会員の管理にのみ使用します。</p>
+          </form>
+
+          <form id="resetForm" hidden>
+            <p class="login-card__lead">登録済みのメールアドレスと、新しいパスワードを入力してください。確認コードをお送りします。</p>
+            <label class="login-card__label" for="resetEmail">メールアドレス</label>
+            <input class="login-card__input" id="resetEmail" type="email" autocomplete="username" required>
+            <label class="login-card__label login-card__label--next" for="resetPassword">新しいパスワード(8文字以上)</label>
+            <input class="login-card__input" id="resetPassword" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+            <button class="btn btn--primary login-card__btn" type="submit">確認コードを送る</button>
+            <button class="login-card__back" id="resetToLogin" type="button">ログインに戻る</button>
+          </form>
+
+          <form id="codeForm" hidden>
+            <p class="login-card__lead">入力したメールアドレス宛に確認コードを送信しました。届かないときは、迷惑メールフォルダと、登録済みのメールアドレスかどうかをご確認ください。</p>
+            <label class="login-card__label" for="loginCode">確認コード(6桁)</label>
+            <input class="login-card__input login-card__input--code" id="loginCode" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+            <button class="btn btn--primary login-card__btn" type="submit">確認する</button>
+            <button class="login-card__back" id="backToEmail" type="button">ログインに戻る</button>
+          </form>
+
+          <p class="login-card__message" id="loginMessage" role="alert" hidden></p>
+          <p class="login-card__note">このページは会員の方のみご覧いただけます。</p>
+        </div>
+
+        <!-- ログイン後の表示 -->
+        <div id="memberContent" hidden>
+          <p class="members__soon" id="memberEmpty" hidden>COMING SOON</p>
+          <ul class="member-grid" id="memberList"></ul>
+          <div class="member-page__actions">
+            <button class="login-card__back" id="logoutButton" type="button">ログアウト</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== フッター ===== -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <img class="footer__logo" src="assets/logo.svg" alt="95s PRIDE" width="120" height="120" loading="lazy">
+      <p class="footer__tag">CONNECTING OUR GENERATION SINCE 1995</p>
+      <p class="footer__copy">&copy; 2026 95s PRIDE</p>
+    </div>
+  </footer>
+
+  <script src="js/main.js" defer></script>
+  <script src="js/members.js" defer></script>
+</body>
+</html>
