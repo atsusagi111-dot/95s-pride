@@ -209,6 +209,7 @@
     'あっちゃん': 'assets/members/acchan.png',
     'ゆーり': 'assets/members/yuuri.png',
     'ゆーほ': 'assets/members/yuuho.png',
+    'ワケトン': 'assets/members/waketon.png',
   };
 
   function createProfilePhoto(name) {
