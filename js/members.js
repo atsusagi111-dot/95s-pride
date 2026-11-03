@@ -6,14 +6,10 @@
   var login = document.getElementById('memberLogin');
   var content = document.getElementById('memberContent');
   var emailForm = document.getElementById('emailForm');
-  var registerForm = document.getElementById('registerForm');
   var resetForm = document.getElementById('resetForm');
   var codeForm = document.getElementById('codeForm');
   var emailInput = document.getElementById('loginEmail');
   var passwordInput = document.getElementById('loginPassword');
-  var registerName = document.getElementById('registerName');
-  var registerEmail = document.getElementById('registerEmail');
-  var registerPassword = document.getElementById('registerPassword');
   var resetEmail = document.getElementById('resetEmail');
   var resetPassword = document.getElementById('resetPassword');
   var codeInput = document.getElementById('loginCode');
@@ -24,7 +20,6 @@
 
   var ERROR_MESSAGES = {
     invalid_email: 'メールアドレスの形式を確認してください。',
-    invalid_name: '名前を入力してください。',
     invalid_password: 'パスワードは8文字以上で入力してください。',
     invalid_credentials: 'メールアドレスまたはパスワードが正しくありません。',
     too_many_attempts: 'ログインの試行が多すぎます。15分ほど待ってからお試しください。',
@@ -59,7 +54,6 @@
 
   function showLoginStep(form) {
     emailForm.hidden = form !== emailForm;
-    registerForm.hidden = form !== registerForm;
     resetForm.hidden = form !== resetForm;
     codeForm.hidden = form !== codeForm;
     showMessage('');
@@ -154,7 +148,6 @@
   // 入力したパスワードを画面に残さない
   function clearPasswords() {
     passwordInput.value = '';
-    registerPassword.value = '';
     resetPassword.value = '';
   }
 
@@ -169,11 +162,6 @@
         showMessage(ERROR_MESSAGES[result.data.error] || DEFAULT_ERROR);
       }
     });
-  });
-
-  registerForm.addEventListener('submit', function (e) {
-    e.preventDefault();
-    sendCode(registerForm, '/api/auth/register', { name: registerName.value, email: registerEmail.value, password: registerPassword.value });
   });
 
   resetForm.addEventListener('submit', function (e) {
@@ -198,14 +186,6 @@
     showLoginStep(emailForm);
   });
 
-  document.getElementById('showRegister').addEventListener('click', function () {
-    showLoginStep(registerForm);
-  });
-
-  document.getElementById('showLogin').addEventListener('click', function () {
-    showLoginStep(emailForm);
-  });
-
   document.getElementById('showReset').addEventListener('click', function () {
     showLoginStep(resetForm);
   });
@@ -221,5 +201,52 @@
     });
   });
 
+  /* ---------- ログインなしで見られるプロフィール ---------- */
+  // 名前の上に出す写真。画像を assets/members/ に置き、「'名前': 'ファイルのパス'」の形で1行ずつ追加する
+  // 名前はフォームの回答(Q2)と同じ表記にする。写真は自動で丸く切り抜かれる
+  var PROFILE_IMAGES = {
+    // '山田太郎': 'assets/members/yamada.jpg',
+    'あっちゃん': 'assets/members/acchan.png',
+    'ゆーり': 'assets/members/yuuri.png',
+    'ゆーほ': 'assets/members/yuuho.png',
+  };
+
+  function createProfilePhoto(name) {
+    var src = PROFILE_IMAGES[name.trim()];
+    if (!src) return createElement('span', 'member-card__initial', name.trim().charAt(0));
+    var image = createElement('img', 'member-card__image');
+    image.src = src;
+    image.alt = '';
+    image.loading = 'lazy';
+    return image;
+  }
+
+  function createProfileCard(profile) {
+    var card = createElement('li', 'member-card profile-card');
+    if (profile.title) {
+      card.appendChild(createProfilePhoto(profile.title));
+      card.appendChild(createElement('h3', 'member-card__name', profile.title));
+    }
+    var items = createElement('dl', 'profile-card__list');
+    profile.items.forEach(function (item) {
+      items.appendChild(createElement('dt', 'profile-card__label', item.label));
+      items.appendChild(createElement('dd', 'profile-card__value', item.value));
+    });
+    card.appendChild(items);
+    return card;
+  }
+
+  function loadPublicProfiles() {
+    fetch('/api/public-profiles').then(function (res) {
+      return res.ok ? res.json() : { profiles: [] };
+    }).then(function (data) {
+      var profiles = data.profiles || [];
+      var publicList = document.getElementById('publicProfileList');
+      profiles.forEach(function (profile) { publicList.appendChild(createProfileCard(profile)); });
+      document.getElementById('publicProfiles').hidden = profiles.length === 0;
+    }).catch(function () {});
+  }
+
+  loadPublicProfiles();
   loadMembers();
 })();

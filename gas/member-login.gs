@@ -1,7 +1,7 @@
 // メンバーページの会員情報(確認コード・パスワードのハッシュ)の管理とメンバー情報の配信を行う
 // 回答一覧スプレッドシートの Apps Script に追加して使う(このファイルだけで動く)
 
-// true にすると新規会員登録を止め、「ログイン管理」シートで「許可」にした人だけログインできる
+// true にすると、フォーム回答者も「ログイン管理」シートで「許可」にした人だけログインできる
 const REQUIRE_APPROVAL = false;
 
 const LOGIN_SENDER_NAME = '95s PRIDE';
@@ -10,6 +10,13 @@ const ACCESS_SHEET_NAME = 'ログイン管理';
 const MEMBER_SHEET_NAME = 'メンバー掲載';
 const EMAIL_HEADERS = ['email address', 'メールアドレス'];
 
+// ログインなしで公開するプロフィール(回答シートの行番号と、B〜S列の範囲)
+const PUBLIC_ROWS = [2, 7, 9, 17, 18, 19];
+const PUBLIC_FIRST_COLUMN = 2; // B列
+const PUBLIC_LAST_COLUMN = 19; // S列
+// 見出しにこれらの語を含む列は公開しない(連絡先・内部向けの項目)
+const PUBLIC_EXCLUDE_KEYWORDS = ['email', 'mail', 'メール', '電話', 'tel', '住所', '郵便', 'line', 'q19', '特典', '本名'];
+
 const CODE_TTL_SECONDS = 600; // コードの有効期間(10分)
 const MAX_ATTEMPTS = 5; // 1つのコードで試せる回数
 const RESEND_INTERVAL_SECONDS = 60; // 再送までの待ち時間
@@ -17,8 +24,6 @@ const RESEND_WINDOW_SECONDS = 21600; // 送信回数を数える期間(6時間)
 const MAX_SENDS_PER_WINDOW = 5; // 上の期間に1人へ送れる回数
 const LOGIN_ATTEMPT_LIMIT = 10; // 続けて試せるログイン回数
 const LOGIN_LOCK_SECONDS = 900; // 上の回数を超えたときに待つ時間(15分)
-const REGISTER_LIMIT_PER_IP = 5; // 1時間に同じ接続元から申し込める回数
-const REGISTER_MAIL_RESERVE = 30; // 既存メンバーのログイン用に残す1日の送信数
 
 // 最初に1回実行して、管理用シートとスプレッドシートIDを準備する(再実行しても内容は消えない)
 function setupMemberLogin() {
@@ -80,8 +85,8 @@ function generateCode() {
   return String(number % 1000000).padStart(6, '0');
 }
 
-// 確認コードを送る(照合が済むとパスワードを保存し、name があれば新規会員として登録する)
-function sendCode(email, name, passwordHash) {
+// 確認コードを送る(照合が済むとパスワードを保存する)
+function sendCode(email, passwordHash) {
   const cache = CacheService.getScriptCache();
   const cooldownKey = `login-cooldown:${email}`;
   const countKey = `login-count:${email}`;
@@ -104,15 +109,15 @@ function sendCode(email, name, passwordHash) {
     replyTo: LOGIN_REPLY_TO,
   });
 
-  cache.put(`login-code:${email}`, JSON.stringify({ code, name, passwordHash, attempts: 0 }), CODE_TTL_SECONDS);
+  cache.put(`login-code:${email}`, JSON.stringify({ code, passwordHash, attempts: 0 }), CODE_TTL_SECONDS);
   cache.put(cooldownKey, '1', RESEND_INTERVAL_SECONDS);
   cache.put(countKey, String(sendCount + 1), RESEND_WINDOW_SECONDS);
   return { ok: true };
 }
 
-// 許可された人にだけ再設定用のコードを送る(未登録の人にも同じ結果を返す)
+// 許可された人にだけパスワード設定用のコードを送る(初回・再設定とも。未登録の人にも同じ結果を返す)
 function requestPasswordReset(email, passwordHash) {
-  return isAllowed(email) ? sendCode(email, '', passwordHash) : { ok: true };
+  return isAllowed(email) ? sendCode(email, passwordHash) : { ok: true };
 }
 
 // ログインの回数を数え、保存済みのハッシュを返す(許可されていない人には返さない)
@@ -132,34 +137,6 @@ function clearLoginAttempts(email) {
   return { ok: true };
 }
 
-// 同じ接続元からの申し込みが多すぎないか数える
-function isRegisterLimited(ip) {
-  const cache = CacheService.getScriptCache();
-  const key = `register-ip:${ip}`;
-  const count = Number(cache.get(key) || 0);
-  if (count >= REGISTER_LIMIT_PER_IP) return true;
-  cache.put(key, String(count + 1), 3600);
-  return false;
-}
-
-// 新規会員登録を受け付ける(登録済みかどうかが分からないよう、結果は常に同じ)
-function registerMember(email, name, ip, passwordHash) {
-  if (isAllowed(email)) return sendCode(email, '', passwordHash);
-  if (REQUIRE_APPROVAL) return { ok: true };
-
-  const stopped = readAccessRules(getSpreadsheet())[email] === '停止';
-  const quotaLow = MailApp.getRemainingDailyQuota() <= REGISTER_MAIL_RESERVE;
-  if (stopped || quotaLow || isRegisterLimited(ip)) return { ok: true };
-  return sendCode(email, name, passwordHash);
-}
-
-// メール確認が済んだ新規会員を「ログイン管理」シートに追加する
-function addRegisteredMember(email, name) {
-  const spreadsheet = getSpreadsheet();
-  if (readAccessRules(spreadsheet)[email]) return;
-  spreadsheet.getSheetByName(ACCESS_SHEET_NAME).appendRow([email, '許可', `新規登録: ${name}`]);
-}
-
 // コードを照合する(成功したコードと、試行回数を超えたコードは使えなくする)
 function verifyCode(email, code) {
   const lock = LockService.getScriptLock();
@@ -173,7 +150,6 @@ function verifyCode(email, code) {
     const entry = JSON.parse(saved);
     if (entry.code === code) {
       cache.remove(key);
-      if (entry.name) addRegisteredMember(email, entry.name);
       if (!isAllowed(email)) return { valid: false };
 
       PropertiesService.getScriptProperties().setProperty(`password:${email}`, entry.passwordHash);
@@ -204,6 +180,65 @@ function listMembers(email) {
   return { allowed: true, members };
 }
 
+// フォームの回答シート(メールアドレスの列があるシート)を探す
+function getResponseSheet(spreadsheet) {
+  return spreadsheet.getSheets()
+    .filter((sheet) => ![ACCESS_SHEET_NAME, MEMBER_SHEET_NAME].includes(sheet.getName()))
+    .find((sheet) => sheet.getDataRange().getDisplayValues()[0]
+      .some((header) => EMAIL_HEADERS.includes(header.trim().toLowerCase())));
+}
+
+function isPublicColumn(header) {
+  const text = header.trim().toLowerCase();
+  return Boolean(text) && !PUBLIC_EXCLUDE_KEYWORDS.some((keyword) => text.includes(keyword));
+}
+
+// 公開する列の番号(0始まり)を返す
+function getPublicColumns(headers) {
+  const columns = [];
+  for (let column = PUBLIC_FIRST_COLUMN - 1; column < Math.min(PUBLIC_LAST_COLUMN, headers.length); column += 1) {
+    if (isPublicColumn(headers[column])) columns.push(column);
+  }
+  return columns;
+}
+
+// 指定行の公開してよい列だけを返す(見出しの「Q2 」で始まる列を名前として使う)
+function listPublicProfiles() {
+  const sheet = getResponseSheet(getSpreadsheet());
+  if (!sheet) return { profiles: [] };
+
+  const rows = sheet.getDataRange().getDisplayValues();
+  const headers = rows[0];
+  const columns = getPublicColumns(headers);
+  const profiles = PUBLIC_ROWS
+    .filter((rowNumber) => rowNumber >= 2 && rowNumber <= rows.length)
+    .map((rowNumber) => {
+      const row = rows[rowNumber - 1];
+      const titleColumn = columns.find((column) => headers[column].startsWith('Q2 '));
+      const items = columns
+        .filter((column) => column !== titleColumn && row[column].trim())
+        .map((column) => ({ label: headers[column].replace(/^Q\d+[\s.．:：]*/, ''), value: row[column] }));
+      return { title: titleColumn === undefined ? '' : row[titleColumn], items };
+    })
+    .filter((profile) => profile.title || profile.items.length);
+  return { profiles };
+}
+
+// エディタから実行して、公開される列と除外される列を実行ログで確認する
+function previewPublicProfiles() {
+  const sheet = getResponseSheet(getSpreadsheet());
+  if (!sheet) {
+    console.log('メールアドレスの列がある回答シートが見つかりません');
+    return;
+  }
+  const headers = sheet.getDataRange().getDisplayValues()[0];
+  for (let column = PUBLIC_FIRST_COLUMN - 1; column < Math.min(PUBLIC_LAST_COLUMN, headers.length); column += 1) {
+    const letter = String.fromCharCode(65 + column);
+    console.log(`${letter}列 ${isPublicColumn(headers[column]) ? '公開' : '除外'}: ${headers[column]}`);
+  }
+  console.log(`公開する行: ${PUBLIC_ROWS.join(', ')}(シート「${sheet.getName()}」)`);
+}
+
 function jsonResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -220,9 +255,9 @@ function doPost(e) {
     if (request.action === 'beginLogin') return jsonResponse(beginLogin(email));
     if (request.action === 'clearLoginAttempts') return jsonResponse(clearLoginAttempts(email));
     if (request.action === 'requestPasswordReset') return jsonResponse(requestPasswordReset(email, passwordHash));
-    if (request.action === 'registerMember') return jsonResponse(registerMember(email, String(request.name || ''), String(request.ip || ''), passwordHash));
     if (request.action === 'verifyCode') return jsonResponse(verifyCode(email, String(request.code || '')));
     if (request.action === 'listMembers') return jsonResponse(listMembers(email));
+    if (request.action === 'publicProfiles') return jsonResponse(listPublicProfiles());
     return jsonResponse({ error: 'unknown_action' });
   } catch (error) {
     console.error(error);

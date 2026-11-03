@@ -1231,4 +1231,11 @@ body.is-ready .hero__logo { animation: heroFloat 6s ease-in-out 1.2s infinite al
 .member-card__name { margin: 0; font-size: 1.1rem; font-weight: 900; color: var(--color-primary-dark); overflow-wrap: anywhere; }
 .member-card__title { margin: 6px 0 0; font-size: .85rem; font-weight: 700; color: var(--color-accent-deep); overflow-wrap: anywhere; }
 .member-card__bio { margin: 12px 0 0; font-size: .9rem; line-height: 1.8; text-align: left; white-space: pre-line; overflow-wrap: anywhere; }
+.member-page__public { margin-bottom: 64px; }
+.profile-card { align-items: stretch; text-align: left; }
+.profile-card .member-card__name { text-align: center; }
+.profile-card .member-card__image, .profile-card .member-card__initial { align-self: center; }
+.profile-card__list { margin: 4px 0 0; }
+.profile-card__label { margin-top: 14px; font-size: .78rem; font-weight: 700; letter-spacing: .04em; color: var(--color-accent-deep); }
+.profile-card__value { margin: 4px 0 0; font-size: .9rem; line-height: 1.8; white-space: pre-line; overflow-wrap: anywhere; }
 .member-card__link { margin-top: 14px; font-size: .88rem; font-weight: 700; color: var(--color-primary); }
