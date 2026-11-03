@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>プロフィール | 95s PRIDE</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2E6B5A">
+
+  <link rel="icon" type="image/svg+xml" href="/assets/logo-mark.svg">
+  <link rel="apple-touch-icon" href="/assets/logo.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="header header--solid" id="header">
+    <div class="container header__inner">
+      <a href="/" class="header__brand" aria-label="95s PRIDE トップへ">
+        <img src="/assets/logo-mark.svg" alt="" width="40" height="40">
+        <span>95s PRIDE</span>
+      </a>
+      <button class="header__toggle" id="navToggle" aria-expanded="false" aria-controls="nav" aria-label="メニューを開く">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="nav" id="nav">
+        <ul class="nav__list">
+          <li><a href="/#about">理念</a></li>
+          <li><a href="/#pride">5つの価値観</a></li>
+          <li><a href="/#activities">活動・お知らせ</a></li>
+          <li><a href="/#members">個人活動</a></li>
+          <li><a href="/members" aria-current="page">メンバー</a></li>
+          <li><a href="/#sponsors">協賛企業</a></li>
+          <li><a href="/#join">参加案内</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section members member-page">
+      <div class="container">
+        <p class="member-page__loading" id="profileStatus">読み込み中です</p>
+        <article class="member-card profile-card profile-detail" id="profileDetail" hidden></article>
+        <div class="member-page__actions">
+          <a class="login-card__back" href="/members">メンバー一覧に戻る</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== フッター ===== -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <img class="footer__logo" src="/assets/logo.svg" alt="95s PRIDE" width="120" height="120" loading="lazy">
+      <p class="footer__tag">CONNECTING OUR GENERATION SINCE 1995</p>
+      <p class="footer__copy">&copy; 2026 95s PRIDE</p>
+    </div>
+  </footer>
+
+  <script src="/js/main.js" defer></script>
+  <script src="/js/profiles.js" defer></script>
+</body>
+</html>
