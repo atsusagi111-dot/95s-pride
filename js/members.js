@@ -202,8 +202,8 @@
   });
 
   /* ---------- ログインなしで見られるプロフィール ---------- */
-  // 名前の上に出す写真。画像を assets/members/ に置き、「'名前': 'ファイルのパス'」の形で1行ずつ追加する
-  // 名前はフォームの回答(Q2)と同じ表記にする。写真は自動で丸く切り抜かれる
+  // 見出しの上に出す写真。画像を assets/members/ に置き、「'名前': 'ファイルのパス'」の形で1行ずつ追加する
+  // 名前はフォームの「名前 (呼ばれたいニックネーム)」の回答と同じ表記にする。写真は自動で丸く切り抜かれる
   var PROFILE_IMAGES = {
     // '山田太郎': 'assets/members/yamada.jpg',
     'あっちゃん': 'assets/members/acchan.png',
@@ -213,6 +213,12 @@
     '沢村 亮 （亮榎、沢村、さわむー ）': 'assets/members/sawamura.png',
     'あすか、あすかちゃん': 'assets/members/asuka.png',
   };
+
+  // 「名前」の項目の回答を返す(無ければ見出しを使う)
+  function getProfileName(profile) {
+    var nameItem = profile.items.filter(function (item) { return item.label.indexOf('名前') === 0; })[0];
+    return nameItem ? nameItem.value : profile.title;
+  }
 
   function createProfilePhoto(name) {
     var src = PROFILE_IMAGES[name.trim()];
@@ -227,7 +233,7 @@
   function createProfileCard(profile) {
     var card = createElement('li', 'member-card profile-card');
     if (profile.title) {
-      card.appendChild(createProfilePhoto(profile.title));
+      card.appendChild(createProfilePhoto(getProfileName(profile)));
       card.appendChild(createElement('h3', 'member-card__name', profile.title));
     }
     var items = createElement('dl', 'profile-card__list');

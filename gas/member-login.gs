@@ -14,6 +14,7 @@ const EMAIL_HEADERS = ['email address', 'メールアドレス'];
 const PUBLIC_ROWS = [2, 7, 9, 17, 18, 19];
 const PUBLIC_FIRST_COLUMN = 2; // B列
 const PUBLIC_LAST_COLUMN = 19; // S列
+const PUBLIC_TITLE_PREFIX = 'Q1 '; // カードの見出しにする列(見出しがこの文字で始まる列)
 // 見出しにこれらの語を含む列は公開しない(連絡先・内部向けの項目)
 const PUBLIC_EXCLUDE_KEYWORDS = ['email', 'mail', 'メール', '電話', 'tel', '住所', '郵便', 'line', 'q19', '特典', '本名'];
 
@@ -202,7 +203,7 @@ function getPublicColumns(headers) {
   return columns;
 }
 
-// 指定行の公開してよい列だけを返す(見出しの「Q2 」で始まる列を名前として使う)
+// 指定行の公開してよい列だけを返す(PUBLIC_TITLE_PREFIX で始まる列をカードの見出しにする)
 function listPublicProfiles() {
   const sheet = getResponseSheet(getSpreadsheet());
   if (!sheet) return { profiles: [] };
@@ -214,7 +215,7 @@ function listPublicProfiles() {
     .filter((rowNumber) => rowNumber >= 2 && rowNumber <= rows.length)
     .map((rowNumber) => {
       const row = rows[rowNumber - 1];
-      const titleColumn = columns.find((column) => headers[column].startsWith('Q2 '));
+      const titleColumn = columns.find((column) => headers[column].startsWith(PUBLIC_TITLE_PREFIX));
       const items = columns
         .filter((column) => column !== titleColumn && row[column].trim())
         .map((column) => ({ label: headers[column].replace(/^Q\d+[\s.．:：]*/, ''), value: row[column] }));
