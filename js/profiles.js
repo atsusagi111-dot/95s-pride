@@ -4,6 +4,7 @@
 
   // 写真。画像を assets/members/ に置き、「'名前': 'ファイルのパス'」の形で1行ずつ追加する
   // 名前はフォームの「名前 (呼ばれたいニックネーム)」の回答と同じ表記にする。写真は自動で丸く切り抜かれる
+  // 写真を差し替えるときはファイル名を変える(画像はブラウザに1年間保存されるため、同じ名前だと古い写真が出続ける)
   var PROFILE_IMAGES = {
     // '山田太郎': 'assets/members/yamada.jpg',
     'あっちゃん': 'assets/members/acchan.png',
@@ -11,7 +12,7 @@
     'ゆーほ': 'assets/members/yuuho.png',
     'ワケトン': 'assets/members/waketon.png',
     '沢村 亮 （亮榎、沢村、さわむー ）': 'assets/members/sawamura.png',
-    'あすか、あすかちゃん': 'assets/members/asuka.png',
+    'あすか、あすかちゃん': 'assets/members/asuka-2.png',
     'りーくん。': 'assets/members/riikun.png',
   };
 
