@@ -11,7 +11,7 @@ const MEMBER_SHEET_NAME = 'メンバー掲載';
 const EMAIL_HEADERS = ['email address', 'メールアドレス'];
 
 // ログインなしで公開するプロフィール(回答シートの行番号と、B〜S列の範囲)
-const PUBLIC_ROWS = [2, 7, 9, 17, 18, 19];
+const PUBLIC_ROWS = [2, 7, 9, 17, 18, 19, 22];
 const PUBLIC_FIRST_COLUMN = 2; // B列
 const PUBLIC_LAST_COLUMN = 19; // S列
 const PUBLIC_TITLE_PREFIX = 'Q1 '; // カードの見出しにする列(見出しがこの文字で始まる列)

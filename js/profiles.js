@@ -12,6 +12,7 @@
     'ワケトン': 'assets/members/waketon.png',
     '沢村 亮 （亮榎、沢村、さわむー ）': 'assets/members/sawamura.png',
     'あすか、あすかちゃん': 'assets/members/asuka.png',
+    'りーくん。': 'assets/members/riikun.png',
   };
 
   function createElement(tag, className, text) {
