@@ -115,6 +115,8 @@
     members.forEach(function (member) { list.appendChild(createCard(member)); });
     empty.hidden = members.length > 0;
     showView(content);
+    // ログインできたことを profiles.js に知らせる(会員限定プロフィールを読み込む)
+    document.dispatchEvent(new Event('member:login'));
   }
 
   function loadMembers() {
@@ -197,6 +199,7 @@
   document.getElementById('logoutButton').addEventListener('click', function () {
     request('/api/auth/logout').then(function () {
       list.textContent = '';
+      document.dispatchEvent(new Event('member:logout'));
       showLoginStep(emailForm);
     });
   });

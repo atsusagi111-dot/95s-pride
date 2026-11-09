@@ -204,14 +204,15 @@ function getPublicColumns(headers) {
 }
 
 // 指定行の公開してよい列だけを返す(PUBLIC_TITLE_PREFIX で始まる列をカードの見出しにする)
-function listPublicProfiles() {
+// pickRows は「シート全体の行数」を受け取り、使う行番号の配列を返す関数
+function buildProfiles(pickRows) {
   const sheet = getResponseSheet(getSpreadsheet());
   if (!sheet) return { profiles: [] };
 
   const rows = sheet.getDataRange().getDisplayValues();
   const headers = rows[0];
   const columns = getPublicColumns(headers);
-  const profiles = PUBLIC_ROWS
+  const profiles = pickRows(rows.length)
     .filter((rowNumber) => rowNumber >= 2 && rowNumber <= rows.length)
     .map((rowNumber) => {
       const row = rows[rowNumber - 1];
@@ -223,6 +224,24 @@ function listPublicProfiles() {
     })
     .filter((profile) => profile.title || profile.items.length);
   return { profiles };
+}
+
+// ログインなしで見られるプロフィール(PUBLIC_ROWS の行)
+function listPublicProfiles() {
+  return buildProfiles(() => PUBLIC_ROWS);
+}
+
+// ログインした人だけが見られるプロフィール(PUBLIC_ROWS 以外のすべての回答行)
+function listMemberProfiles(email) {
+  if (!isAllowed(email)) return { allowed: false };
+  const { profiles } = buildProfiles((rowCount) => {
+    const numbers = [];
+    for (let rowNumber = 2; rowNumber <= rowCount; rowNumber += 1) {
+      if (!PUBLIC_ROWS.includes(rowNumber)) numbers.push(rowNumber);
+    }
+    return numbers;
+  });
+  return { allowed: true, profiles };
 }
 
 // エディタから実行して、公開される列と除外される列を実行ログで確認する
@@ -259,6 +278,7 @@ function doPost(e) {
     if (request.action === 'verifyCode') return jsonResponse(verifyCode(email, String(request.code || '')));
     if (request.action === 'listMembers') return jsonResponse(listMembers(email));
     if (request.action === 'publicProfiles') return jsonResponse(listPublicProfiles());
+    if (request.action === 'memberProfiles') return jsonResponse(listMemberProfiles(email));
     return jsonResponse({ error: 'unknown_action' });
   } catch (error) {
     console.error(error);

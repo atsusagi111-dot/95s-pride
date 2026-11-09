@@ -95,6 +95,10 @@
 
         <!-- ログイン後の表示 -->
         <div id="memberContent" hidden>
+          <!-- ログインした人だけが見られるプロフィール(読み込めたときだけ表示) -->
+          <div class="member-page__public" id="memberProfiles" hidden>
+            <ul class="member-grid" id="memberProfileList"></ul>
+          </div>
           <p class="members__soon" id="memberEmpty" hidden>COMING SOON</p>
           <ul class="member-grid" id="memberList"></ul>
           <div class="member-page__actions">

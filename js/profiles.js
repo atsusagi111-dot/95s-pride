@@ -29,16 +29,17 @@
     return (nameItem ? nameItem.value : profile.title).trim();
   }
 
+  // 写真が登録されていない人に使う画像
+  var DEFAULT_IMAGE = 'assets/members/default-avatar.png';
+
   function createProfilePhoto(profile, className) {
-    var name = getProfileName(profile);
-    var src = PROFILE_IMAGES[name];
-    if (!src) return createElement('span', 'member-card__initial ' + className, name.charAt(0));
     var image = createElement('img', 'member-card__image ' + className);
-    image.src = '/' + src;
+    image.src = '/' + (PROFILE_IMAGES[getProfileName(profile)] || DEFAULT_IMAGE);
     image.alt = '';
     return image;
   }
 
+  // ログインなしで見られるプロフィール
   function loadProfiles() {
     return fetch('/api/public-profiles').then(function (res) {
       return res.ok ? res.json() : { profiles: [] };
@@ -47,11 +48,26 @@
     });
   }
 
+  // ログインした人だけが見られるプロフィール(ログインしていなければ status 401 で失敗させる)
+  function loadMemberProfiles() {
+    return fetch('/api/member-profiles', { credentials: 'same-origin' }).then(function (res) {
+      if (!res.ok) {
+        var error = new Error('member_profiles_failed');
+        error.status = res.status;
+        throw error;
+      }
+      return res.json();
+    }).then(function (data) {
+      return data.profiles || [];
+    });
+  }
+
   /* ---------- 一覧(メンバーページ):表示名と写真だけを出し、詳細ページへリンクする ---------- */
-  function createProfileCard(profile, index) {
+  // query は詳細ページのURLの「?no=」(公開)か「?m=」(会員限定)
+  function createProfileCard(profile, index, query) {
     var card = createElement('li', 'member-card profile-card');
     var link = createElement('a', 'profile-card__link');
-    link.href = '/profile?no=' + (index + 1);
+    link.href = '/profile?' + query + '=' + (index + 1);
     var photo = createProfilePhoto(profile, '');
     photo.loading = 'lazy';
     link.appendChild(photo);
@@ -64,17 +80,40 @@
   function showProfileList(container) {
     loadProfiles().then(function (profiles) {
       var list = document.getElementById('publicProfileList');
-      profiles.forEach(function (profile, index) { list.appendChild(createProfileCard(profile, index)); });
+      profiles.forEach(function (profile, index) { list.appendChild(createProfileCard(profile, index, 'no')); });
       container.hidden = profiles.length === 0;
     }).catch(function () {});
   }
 
+  /* ---------- 会員限定の一覧(ログイン後にメンバーページで表示) ---------- */
+  function showMemberProfileList(container) {
+    var list = document.getElementById('memberProfileList');
+    loadMemberProfiles().then(function (profiles) {
+      list.textContent = '';
+      profiles.forEach(function (profile, index) { list.appendChild(createProfileCard(profile, index, 'm')); });
+      container.hidden = profiles.length === 0;
+      // プロフィールが出るときは「COMING SOON」を隠す
+      var empty = document.getElementById('memberEmpty');
+      if (empty && profiles.length) empty.hidden = true;
+    }).catch(function () {
+      container.hidden = true;
+    });
+  }
+
+  function hideMemberProfileList(container) {
+    document.getElementById('memberProfileList').textContent = '';
+    container.hidden = true;
+  }
+
   /* ---------- 詳細ページ:Q2以降の回答をすべて出す ---------- */
+  // 「?m=」なら会員限定(ログインが必要)、「?no=」なら公開のプロフィールを出す
   function showProfileDetail(container) {
-    var number = Number(new URLSearchParams(location.search).get('no'));
+    var params = new URLSearchParams(location.search);
+    var isMemberOnly = params.has('m');
+    var number = Number(isMemberOnly ? params.get('m') : params.get('no'));
     var status = document.getElementById('profileStatus');
 
-    loadProfiles().then(function (profiles) {
+    (isMemberOnly ? loadMemberProfiles() : loadProfiles()).then(function (profiles) {
       var profile = profiles[number - 1];
       if (!profile) {
         status.textContent = 'プロフィールが見つかりませんでした。';
@@ -93,7 +132,11 @@
       container.appendChild(items);
       status.hidden = true;
       container.hidden = false;
-    }).catch(function () {
+    }).catch(function (error) {
+      if (error && error.status === 401) {
+        status.textContent = 'このプロフィールはメンバー限定です。メンバーページからログインしてください。';
+        return;
+      }
       status.textContent = 'ただいま表示できません。時間をおいてもう一度お試しください。';
     });
   }
@@ -102,4 +145,11 @@
   var detailContainer = document.getElementById('profileDetail');
   if (listContainer) showProfileList(listContainer);
   if (detailContainer) showProfileDetail(detailContainer);
+
+  // members.js がログイン・ログアウトを知らせてきたら、会員限定の一覧を出し入れする
+  var memberContainer = document.getElementById('memberProfiles');
+  if (memberContainer) {
+    document.addEventListener('member:login', function () { showMemberProfileList(memberContainer); });
+    document.addEventListener('member:logout', function () { hideMemberProfileList(memberContainer); });
+  }
 })();
