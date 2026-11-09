@@ -30,7 +30,7 @@
   }
 
   // 写真が登録されていない人に使う画像
-  var DEFAULT_IMAGE = 'assets/members/default-avatar.png';
+  var DEFAULT_IMAGE = 'assets/members/default-avatar-2.png';
 
   function createProfilePhoto(profile, className) {
     var image = createElement('img', 'member-card__image ' + className);
