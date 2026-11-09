@@ -12,7 +12,7 @@
     'ゆーほ': 'assets/members/yuuho.png',
     'ワケトン': 'assets/members/waketon.png',
     '沢村 亮 （亮榎、沢村、さわむー ）': 'assets/members/sawamura.png',
-    'あすか、あすかちゃん': 'assets/members/asuka-2.png',
+    'あすか、あすかちゃん': 'assets/members/asuka-3.png',
     'りーくん。': 'assets/members/riikun.png',
   };
 
