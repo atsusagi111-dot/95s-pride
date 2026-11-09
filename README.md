@@ -9,7 +9,7 @@
 | 公式サイト(HP) | https://95s-pride.vercel.app | だれでも見られる公式サイト |
 | メンバー紹介 | https://95s-pride.vercel.app/members | メンバー一覧と詳細ページ |
 | プロフィールアンケート(回答フォーム) | https://docs.google.com/forms/d/1SDT8zRew98MbdgINQX9Ok2DUIXW_VF4A6V1sx7lV7YM/viewform | 「コミュニティ プロフィール作成アンケート」 |
-| 回答が反映されるスプレッドシート | (未記入:URLを追記してください) | 回答シート、「ログイン管理」「メンバー掲載」シート |
+| 回答が反映されるスプレッドシート | https://docs.google.com/spreadsheets/d/1F3uJVYtRY94kgKbKkEQhZo49hf_nf5TP40hxSp0ZsFY/edit | 「コミュニティ プロフィール回答一覧」。回答シート、「ログイン管理」「メンバー掲載」シート |
 
 > スプレッドシートには個人情報が入っています。共有範囲を広げないでください。
 
