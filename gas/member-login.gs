@@ -6,6 +6,9 @@ const REQUIRE_APPROVAL = false;
 
 const LOGIN_SENDER_NAME = '95s PRIDE';
 const LOGIN_REPLY_TO = '95spride.official@gmail.com'; // 返信の受け取り先
+// 認証メール(確認コード・パスワード再設定)の差出人
+// 実行アカウントのGmailで「他のメールアドレスを追加(Send mail as)」に登録済みである必要がある
+const LOGIN_FROM = '95spride.official@gmail.com';
 const ACCESS_SHEET_NAME = 'ログイン管理';
 const MEMBER_SHEET_NAME = 'メンバー掲載';
 const EMAIL_HEADERS = ['email address', 'メールアドレス'];
@@ -86,6 +89,22 @@ function generateCode() {
   return String(number % 1000000).padStart(6, '0');
 }
 
+// 認証メールを LOGIN_FROM から送る(全ての認証メールはここを通す)
+// MailApp は差出人を変えられないため、エイリアスを指定できる GmailApp を使う
+function sendAuthMail(to, subject, body) {
+  if (!GmailApp.getAliases().includes(LOGIN_FROM)) {
+    // エイリアス未登録のまま送ると実行アカウントのアドレスが表に出るため、送らずに止める
+    throw new Error(`${LOGIN_FROM} が送信元エイリアスに登録されていません`);
+  }
+  GmailApp.sendEmail(to, subject, body, { from: LOGIN_FROM, name: LOGIN_SENDER_NAME, replyTo: LOGIN_REPLY_TO });
+}
+
+// エディタから実行して、差出人の設定を確認する(自分宛てにテストメールが届く)
+function testAuthMailSender() {
+  console.log(`登録済みのエイリアス: ${GmailApp.getAliases().join(', ') || '(なし)'}`);
+  sendAuthMail(Session.getEffectiveUser().getEmail(), '【テスト】95s PRIDE 認証メールの差出人確認', 'このメールの差出人が 95spride.official@gmail.com になっていれば設定完了です。');
+}
+
 // 確認コードを送る(照合が済むとパスワードを保存する)
 function sendCode(email, passwordHash) {
   const cache = CacheService.getScriptCache();
@@ -95,20 +114,14 @@ function sendCode(email, passwordHash) {
   if (cache.get(cooldownKey) || sendCount >= MAX_SENDS_PER_WINDOW) return { ok: true };
 
   const code = generateCode();
-  MailApp.sendEmail({
-    to: email,
-    subject: '【95s PRIDE】メンバーページの確認コード',
-    body: [
-      `確認コード: ${code}`,
-      '',
-      `${CODE_TTL_SECONDS / 60}分以内に、メンバーページで入力してください。`,
-      'このメールに心当たりがない場合は、何もせず破棄してください。',
-      '',
-      LOGIN_SENDER_NAME,
-    ].join('\n'),
-    name: LOGIN_SENDER_NAME,
-    replyTo: LOGIN_REPLY_TO,
-  });
+  sendAuthMail(email, '【95s PRIDE】メンバーページの確認コード', [
+    `確認コード: ${code}`,
+    '',
+    `${CODE_TTL_SECONDS / 60}分以内に、メンバーページで入力してください。`,
+    'このメールに心当たりがない場合は、何もせず破棄してください。',
+    '',
+    LOGIN_SENDER_NAME,
+  ].join('\n'));
 
   cache.put(`login-code:${email}`, JSON.stringify({ code, passwordHash, attempts: 0 }), CODE_TTL_SECONDS);
   cache.put(cooldownKey, '1', RESEND_INTERVAL_SECONDS);
