@@ -45,7 +45,6 @@ function setupMemberLogin() {
   if (!spreadsheet.getSheetByName(MEMBER_SHEET_NAME)) {
     const sheet = spreadsheet.insertSheet(MEMBER_SHEET_NAME);
     sheet.appendRow(['名前', '肩書き', '紹介文', '画像URL', 'Instagram URL']);
-    sheet.appendRow(['サンプル', '会社員', 'ここに紹介文が入ります。', '', '']);
   }
 }
 
@@ -129,9 +128,10 @@ function sendCode(email, passwordHash = '') {
   return { ok: true };
 }
 
-// 許可された人にだけパスワード設定用のコードを送る(初回・再設定とも。未登録の人にも同じ結果を返す)
+// 許可された人にだけパスワード設定用のコードを送る(初回・再設定とも)
+// 未登録の人には registered: false を返し、画面でエラーを出す
 function requestPasswordReset(email, passwordHash) {
-  return isAllowed(email) ? sendCode(email, passwordHash) : { ok: true };
+  return isAllowed(email) ? sendCode(email, passwordHash) : { ok: false, registered: false };
 }
 
 // ログインの回数を数え、保存済みのハッシュを返す(許可されていない人には返さない)
@@ -192,7 +192,8 @@ function listMembers(email) {
 
   const rows = getSpreadsheet().getSheetByName(MEMBER_SHEET_NAME).getDataRange().getDisplayValues().slice(1);
   const members = rows
-    .filter((row) => row[0].trim())
+    // 最初に入れていた「サンプル」の行は出さない
+    .filter((row) => row[0].trim() && row[0].trim() !== 'サンプル')
     .map((row) => ({ name: row[0], title: row[1], bio: row[2], image: row[3], instagram: row[4] }));
   return { allowed: true, members };
 }

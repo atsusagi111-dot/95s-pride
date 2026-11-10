@@ -8,7 +8,9 @@ module.exports = async (req, res) => {
   if (!email) return res.status(400).json({ error: 'invalid_email' });
 
   try {
-    await callGas('requestPasswordReset', { email });
+    const result = await callGas('requestPasswordReset', { email });
+    // フォームに回答していない(登録できない)メールアドレス
+    if (result.registered === false) return res.status(404).json({ error: 'not_registered' });
     return res.status(200).json({ ok: true });
   } catch (error) {
     console.error(error);
