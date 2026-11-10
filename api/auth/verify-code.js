@@ -1,7 +1,8 @@
 const { callGas, normalizeEmail } = require('../_lib/gas');
+const { hashPassword, isValidPassword } = require('../_lib/password');
 const { setSession } = require('../_lib/session');
 
-// 確認コードを照合し、正しければログイン状態にする
+// 確認コードを照合し、正しければ新しいパスワードを保存してログイン状態にする
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
 
@@ -9,8 +10,12 @@ module.exports = async (req, res) => {
   const code = String((req.body && req.body.code) || '').trim();
   if (!email || !/^\d{6}$/.test(code)) return res.status(400).json({ error: 'invalid_code' });
 
+  const password = req.body && req.body.password;
+  if (!isValidPassword(password)) return res.status(400).json({ error: 'invalid_password' });
+
   try {
-    const { valid } = await callGas('verifyCode', { email, code });
+    const passwordHash = await hashPassword(password);
+    const { valid } = await callGas('verifyCode', { email, code, passwordHash });
     if (!valid) return res.status(401).json({ error: 'invalid_code' });
 
     setSession(res, email);

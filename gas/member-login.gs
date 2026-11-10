@@ -105,8 +105,8 @@ function testAuthMailSender() {
   sendAuthMail(Session.getEffectiveUser().getEmail(), '【テスト】95s PRIDE 認証メールの差出人確認', 'このメールの差出人が 95spride.official@gmail.com になっていれば設定完了です。');
 }
 
-// 確認コードを送る(照合が済むとパスワードを保存する)
-function sendCode(email, passwordHash) {
+// 確認コードを送る(照合が済むとパスワードを保存する。パスワードはコード入力時に受け取ることもある)
+function sendCode(email, passwordHash = '') {
   const cache = CacheService.getScriptCache();
   const cooldownKey = `login-cooldown:${email}`;
   const countKey = `login-count:${email}`;
@@ -152,7 +152,8 @@ function clearLoginAttempts(email) {
 }
 
 // コードを照合する(成功したコードと、試行回数を超えたコードは使えなくする)
-function verifyCode(email, code) {
+// newPasswordHash はコード入力画面で決めた新しいパスワード。無ければコード送信時に受け取ったものを使う
+function verifyCode(email, code, newPasswordHash = '') {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -166,7 +167,9 @@ function verifyCode(email, code) {
       cache.remove(key);
       if (!isAllowed(email)) return { valid: false };
 
-      PropertiesService.getScriptProperties().setProperty(`password:${email}`, entry.passwordHash);
+      const passwordHash = newPasswordHash || entry.passwordHash;
+      // パスワードが無いまま照合したときは、今のパスワードを消さない
+      if (passwordHash) PropertiesService.getScriptProperties().setProperty(`password:${email}`, passwordHash);
       clearLoginAttempts(email);
       return { valid: true };
     }
@@ -288,7 +291,7 @@ function doPost(e) {
     if (request.action === 'beginLogin') return jsonResponse(beginLogin(email));
     if (request.action === 'clearLoginAttempts') return jsonResponse(clearLoginAttempts(email));
     if (request.action === 'requestPasswordReset') return jsonResponse(requestPasswordReset(email, passwordHash));
-    if (request.action === 'verifyCode') return jsonResponse(verifyCode(email, String(request.code || '')));
+    if (request.action === 'verifyCode') return jsonResponse(verifyCode(email, String(request.code || ''), passwordHash));
     if (request.action === 'listMembers') return jsonResponse(listMembers(email));
     if (request.action === 'publicProfiles') return jsonResponse(listPublicProfiles());
     if (request.action === 'memberProfiles') return jsonResponse(listMemberProfiles(email));

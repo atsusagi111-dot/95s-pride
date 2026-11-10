@@ -72,20 +72,22 @@
           </form>
 
           <form id="resetForm" hidden>
-            <p class="login-card__lead">プロフィールフォームに回答したメールアドレスと、設定するパスワードを入力してください。確認コードをお送りします。</p>
+            <p class="login-card__lead">プロフィールフォームに回答したメールアドレスを入力してください。確認コードをお送りします。</p>
             <label class="login-card__label" for="resetEmail">メールアドレス</label>
             <input class="login-card__input" id="resetEmail" type="email" autocomplete="username" required>
-            <label class="login-card__label login-card__label--next" for="resetPassword">パスワード(8文字以上)</label>
-            <input class="login-card__input" id="resetPassword" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
             <button class="btn btn--primary login-card__btn" type="submit">確認コードを送る</button>
             <button class="login-card__back" id="resetToLogin" type="button">ログインに戻る</button>
           </form>
 
           <form id="codeForm" hidden>
-            <p class="login-card__lead">入力したメールアドレス宛に確認コードを送信しました。届かないときは、迷惑メールフォルダと、フォームに回答したメールアドレスかどうかをご確認ください。</p>
+            <p class="login-card__lead">入力したメールアドレス宛に確認コードを送信しました。確認コードと、新しく設定するパスワードを入力してください。届かないときは、迷惑メールフォルダと、フォームに回答したメールアドレスかどうかをご確認ください。</p>
             <label class="login-card__label" for="loginCode">確認コード(6桁)</label>
             <input class="login-card__input login-card__input--code" id="loginCode" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
-            <button class="btn btn--primary login-card__btn" type="submit">確認する</button>
+            <!-- パスワード保存機能が正しいメールアドレスと結びつけられるように、隠し項目で渡す -->
+            <input id="codeEmail" type="email" autocomplete="username" hidden>
+            <label class="login-card__label login-card__label--next" for="newPassword">新しいパスワード(8文字以上)</label>
+            <input class="login-card__input" id="newPassword" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+            <button class="btn btn--primary login-card__btn" type="submit">パスワードを設定してログイン</button>
             <button class="login-card__back" id="backToEmail" type="button">ログインに戻る</button>
           </form>
 

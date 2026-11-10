@@ -11,7 +11,8 @@
   var emailInput = document.getElementById('loginEmail');
   var passwordInput = document.getElementById('loginPassword');
   var resetEmail = document.getElementById('resetEmail');
-  var resetPassword = document.getElementById('resetPassword');
+  var codeEmail = document.getElementById('codeEmail');
+  var newPassword = document.getElementById('newPassword');
   var codeInput = document.getElementById('loginCode');
   var message = document.getElementById('loginMessage');
   var list = document.getElementById('memberList');
@@ -139,7 +140,9 @@
     submitting(form, request(path, body)).then(function (result) {
       if (result.ok) {
         pendingEmail = body.email;
+        codeEmail.value = body.email;
         codeInput.value = '';
+        newPassword.value = '';
         showLoginStep(codeForm);
       } else {
         showMessage(ERROR_MESSAGES[result.data.error] || DEFAULT_ERROR);
@@ -150,7 +153,7 @@
   // 入力したパスワードを画面に残さない
   function clearPasswords() {
     passwordInput.value = '';
-    resetPassword.value = '';
+    newPassword.value = '';
   }
 
   emailForm.addEventListener('submit', function (e) {
@@ -168,13 +171,13 @@
 
   resetForm.addEventListener('submit', function (e) {
     e.preventDefault();
-    sendCode(resetForm, '/api/auth/password-reset', { email: resetEmail.value, password: resetPassword.value });
+    sendCode(resetForm, '/api/auth/password-reset', { email: resetEmail.value });
   });
 
   codeForm.addEventListener('submit', function (e) {
     e.preventDefault();
     showMessage('');
-    submitting(codeForm, request('/api/auth/verify-code', { email: pendingEmail, code: codeInput.value })).then(function (result) {
+    submitting(codeForm, request('/api/auth/verify-code', { email: pendingEmail, code: codeInput.value, password: newPassword.value })).then(function (result) {
       if (result.ok) {
         clearPasswords();
         loadMembers();
