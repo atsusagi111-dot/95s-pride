@@ -12,7 +12,8 @@
   <meta property="og:site_name" content="95s PRIDE">
   <meta property="og:title" content="95s PRIDE | 1995年生まれが、次の時代をつくる。">
   <meta property="og:description" content="1995年生まれのコミュニティ。CONNECTING OUR GENERATION SINCE 1995">
-  <meta property="og:image" content="assets/logo.png">
+  <meta property="og:url" content="https://95s-pride.vercel.app/">
+  <meta property="og:image" content="https://95s-pride.vercel.app/assets/logo.png">
   <meta property="og:locale" content="ja_JP">
   <meta name="twitter:card" content="summary">
 
@@ -29,7 +30,7 @@
   <!-- ===== ローディング演出 ===== -->
   <div class="loader" id="loader" aria-hidden="true">
     <div class="loader__ring">
-      <img class="loader__logo" id="loaderLogo" src="assets/logo.svg" alt="" width="360" height="360">
+      <img class="loader__logo" src="assets/logo.svg" alt="" width="360" height="360">
       <svg class="loader__svg" viewBox="0 0 120 120" width="260" height="260" aria-hidden="true">
         <defs>
           <linearGradient id="loaderGrad" x1="0" y1="0" x2="1" y2="1">
@@ -177,7 +178,7 @@
 
         <!--
           お知らせは <article class="news-card"> を1件として追加・削除してください。
-          data-category に「お知らせ」「イベント」「レポート」などを入れるとラベルに表示されます。
+          ラベルは .news-card__cat の文字(「イベント」「活動実績」など)がそのまま表示されます。
         -->
         <div class="news__grid">
           <article class="news-card news-card--event news-card--radio reveal">

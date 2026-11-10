@@ -92,8 +92,11 @@
           </form>
 
           <p class="login-card__message" id="loginMessage" role="alert" hidden></p>
-          <p class="login-card__note">このページは、プロフィールフォームに回答した方のみご覧いただけます。</p>
-          <a class="btn login-card__btn login-card__form-link" href="https://docs.google.com/forms/d/e/1FAIpQLSfeHKnrNRJpZ7EFMmod2a2JNQmQKbJfdzNyyz22lW2AiuGj9w/viewform" target="_blank" rel="noopener noreferrer">プロフィール回答はこちら</a>
+          <!-- フォームへの案内(ログイン画面のときだけ表示する) -->
+          <div id="formGuide">
+            <p class="login-card__note">このページは、プロフィールフォームに回答した方のみご覧いただけます。</p>
+            <a class="btn login-card__btn login-card__form-link" href="https://docs.google.com/forms/d/e/1FAIpQLSfeHKnrNRJpZ7EFMmod2a2JNQmQKbJfdzNyyz22lW2AiuGj9w/viewform" target="_blank" rel="noopener noreferrer">プロフィール回答はこちら</a>
+          </div>
         </div>
 
         <!-- ログイン後の表示 -->

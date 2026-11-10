@@ -1,19 +1,17 @@
-"""95s PRIDE logo generator.
+"""95s PRIDE のロゴ(assets/logo.svg, assets/logo-mark.svg)を生成する。
 
-Coordinates are in the pixel space of assets/logo_screenshot.jpg (999x1639),
-so the output can be overlaid on the screenshot for comparison.
-Usage: python gen_logo.py <path-to-Montserrat[wght].ttf>
+座標は元画像 logo_screenshot.jpg(999x1639)のピクセル座標に合わせてあり、重ねて比較できる。
+使い方: python tools/logo/gen_logo.py
 """
 import math
 import os
-import sys
 
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
 from fontTools.ttLib import TTFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ASSETS = os.path.dirname(HERE)
+ASSETS = os.path.abspath(os.path.join(HERE, "..", "..", "assets"))
 
 CX, CY = 499, 988          # badge centre
 R_OUT, R_IN = 842, 645     # green ring radii
@@ -27,7 +25,7 @@ C_GREEN_SQ = "#2F7560"
 GAP = 5                    # white cut-out between overlapping bands
 
 # ---------------------------------------------------------------- font ----
-font = TTFont(sys.argv[1])
+font = TTFont(os.path.join(HERE, "fonts", "Montserrat-wght.ttf"))
 cmap = font.getBestCmap()
 UPM = font["head"].unitsPerEm
 

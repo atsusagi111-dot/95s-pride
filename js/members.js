@@ -15,6 +15,7 @@
   var newPassword = document.getElementById('newPassword');
   var codeInput = document.getElementById('loginCode');
   var message = document.getElementById('loginMessage');
+  var formGuide = document.getElementById('formGuide');
   var list = document.getElementById('memberList');
   var empty = document.getElementById('memberEmpty');
   var pendingEmail = ''; // 確認コードを送ったメールアドレス
@@ -29,12 +30,13 @@
   };
   var DEFAULT_ERROR = 'ただいま利用できません。時間をおいてもう一度お試しください。';
 
+  // body を渡すと POST、渡さないと GET で呼ぶ
   function request(path, body) {
     var options = { credentials: 'same-origin' };
-    if (path !== '/api/members') {
+    if (body) {
       options.method = 'POST';
       options.headers = { 'Content-Type': 'application/json' };
-      options.body = JSON.stringify(body || {});
+      options.body = JSON.stringify(body);
     }
     return fetch(path, options).then(function (res) {
       return res.json().catch(function () { return {}; }).then(function (data) {
@@ -58,6 +60,7 @@
     emailForm.hidden = form !== emailForm;
     resetForm.hidden = form !== resetForm;
     codeForm.hidden = form !== codeForm;
+    formGuide.hidden = form !== emailForm;
     showMessage('');
     showView(login);
     form.querySelector('input').focus();
@@ -124,7 +127,7 @@
   function loadMembers() {
     return request('/api/members').then(function (result) {
       if (result.ok) {
-        showMembers(result.data.members || []);
+        showMembers(result.data.members);
         return;
       }
       showLoginStep(emailForm);
@@ -132,22 +135,6 @@
     }).catch(function () {
       showLoginStep(emailForm);
       showMessage(DEFAULT_ERROR);
-    });
-  }
-
-  // コード送信を依頼し、成功したらコード入力へ進む
-  function sendCode(form, path, body) {
-    showMessage('');
-    submitting(form, request(path, body)).then(function (result) {
-      if (result.ok) {
-        pendingEmail = body.email;
-        codeEmail.value = body.email;
-        codeInput.value = '';
-        newPassword.value = '';
-        showLoginStep(codeForm);
-      } else {
-        showMessage(ERROR_MESSAGES[result.data.error] || DEFAULT_ERROR);
-      }
     });
   }
 
@@ -172,7 +159,20 @@
 
   resetForm.addEventListener('submit', function (e) {
     e.preventDefault();
-    sendCode(resetForm, '/api/auth/password-reset', { email: resetEmail.value });
+    showMessage('');
+    var email = resetEmail.value;
+    // 確認コードの送信を依頼し、成功したらコード入力へ進む
+    submitting(resetForm, request('/api/auth/password-reset', { email: email })).then(function (result) {
+      if (result.ok) {
+        pendingEmail = email;
+        codeEmail.value = email;
+        codeInput.value = '';
+        newPassword.value = '';
+        showLoginStep(codeForm);
+      } else {
+        showMessage(ERROR_MESSAGES[result.data.error] || DEFAULT_ERROR);
+      }
+    });
   });
 
   codeForm.addEventListener('submit', function (e) {
@@ -201,7 +201,7 @@
   });
 
   document.getElementById('logoutButton').addEventListener('click', function () {
-    request('/api/auth/logout').then(function () {
+    request('/api/auth/logout', {}).then(function () {
       list.textContent = '';
       document.dispatchEvent(new Event('member:logout'));
       showLoginStep(emailForm);

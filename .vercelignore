@@ -1,8 +1,7 @@
-assets/src
-assets/logo_screenshot.jpg
-112772.jpg
-YouTube編集/
-gas/
+# 公開しないもの(サイトに必要なのは HTML / css / js / assets / api / vercel.json だけ)
 .env*
 .claude/
+gas/
+tools/
 アーキテクチャ/
+README.md

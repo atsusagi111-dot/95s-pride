@@ -1,5 +1,5 @@
-"""Render logo.svg -> logo.png (2000px, transparent) and build a comparison image.
-Usage: python render.py <comparison-output.png>
+"""assets/logo.svg を assets/logo.png(2000px・透過)に書き出し、元画像との比較画像を作る。
+使い方: python tools/logo/render.py <比較画像の出力先.png>
 """
 import os
 import sys
@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 from playwright.sync_api import sync_playwright
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ASSETS = os.path.dirname(HERE)
+ASSETS = os.path.abspath(os.path.join(HERE, "..", "..", "assets"))
 SVG = os.path.join(ASSETS, "logo.svg")
 PNG = os.path.join(ASSETS, "logo.png")
 
@@ -23,7 +23,7 @@ with sync_playwright() as p:
 CX, CY, R = 499, 988, 842 + 12
 side = 2 * R
 logo = Image.open(PNG).convert("RGBA").resize((side, side), Image.LANCZOS)
-shot = Image.open(os.path.join(ASSETS, "logo_screenshot.jpg")).convert("RGBA")
+shot = Image.open(os.path.join(HERE, "logo_screenshot.jpg")).convert("RGBA")
 ox, oy = CX - R, CY - R  # screenshot coords of logo's top-left
 
 aligned = Image.new("RGBA", shot.size, (216, 216, 216, 255))

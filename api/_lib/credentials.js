@@ -8,6 +8,12 @@ const MAX_LENGTH = 128;
 // 未登録のメールアドレスでも同じ計算を行い、応答時間で登録の有無が分からないようにする
 const DUMMY_HASH = `scrypt$${'0'.repeat(32)}$${'0'.repeat(KEY_LENGTH * 2)}`;
 
+// メールアドレスを照合用に揃える(不正な形式は空文字を返す)
+function normalizeEmail(value) {
+  const email = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '';
+}
+
 function isValidPassword(password) {
   return typeof password === 'string' && password.length >= MIN_LENGTH && password.length <= MAX_LENGTH;
 }
@@ -26,4 +32,4 @@ async function verifyPassword(password, storedHash) {
   return matched && Boolean(storedHash);
 }
 
-module.exports = { isValidPassword, hashPassword, verifyPassword };
+module.exports = { normalizeEmail, isValidPassword, hashPassword, verifyPassword };

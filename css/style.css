@@ -62,8 +62,8 @@ h1, h2, h3, p, dl, dd { margin: 0; }
   margin-inline: auto;
 }
 
-/* gradient text helper */
-.grad-text, .section__title, .pride-card__letter {
+/* グラデーション文字 */
+.section__title, .pride-card__letter {
   background: var(--grad-text);
   -webkit-background-clip: text;
   background-clip: text;
@@ -755,32 +755,6 @@ body.is-ready .hero__logo { animation: heroFloat 6s ease-in-out 1.2s infinite al
 .news-card__btn { align-self: center; margin-top: 18px; padding: 13px 30px; font-size: .95rem; }
 .news-card__note { align-self: center; text-align: center; }
 .news-card__note + .news-card__btn { margin-top: -3.5px; } /* flex gap 4px と合わせて間隔0.5px */
-/* 準備中カード */
-.news-card--soon .news-card__date { color: var(--color-accent-deep); letter-spacing: .18em; }
-.news-card--soon .news-card__title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.news-card--soon .news-card__title::before {
-  content: "";
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  background: var(--color-accent);
-  box-shadow: 0 0 0 0 rgba(205,169,98,.6);
-  animation: pulse 2s ease-out infinite;
-}
-@keyframes pulse { to { box-shadow: 0 0 0 12px rgba(205,169,98,0); } }
-.news-card--soon::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(115deg, transparent 40%, rgba(205,169,98,.12) 50%, transparent 60%);
-  background-size: 250% 100%;
-  animation: shine 4s linear infinite;
-  pointer-events: none;
-}
-@keyframes shine { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 
 /* ---------- join ---------- */
 .join {
@@ -1031,7 +1005,7 @@ body.is-ready .hero__logo { animation: heroFloat 6s ease-in-out 1.2s infinite al
   padding-left: 14px;
   border-left: 4px solid var(--color-accent);
 }
-.members__list, .sponsors__list {
+.sponsors__list {
   list-style: none; margin: 0; padding: 0;
   display: flex; flex-wrap: wrap; gap: 16px;
 }
@@ -1047,12 +1021,6 @@ body.is-ready .hero__logo { animation: heroFloat 6s ease-in-out 1.2s infinite al
 }
 .member-link:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
 .member-link__name { font-family: var(--font-en); font-weight: 700; font-size: 1.05rem; letter-spacing: .04em; }
-.member-link__tag {
-  font-size: .72rem; font-weight: 700; letter-spacing: .1em;
-  color: var(--color-accent-deep);
-  border: 1px solid rgba(205,169,98,.6);
-  border-radius: 999px; padding: 3px 10px;
-}
 .sponsor-card {
   display: flex; flex-direction: column; align-items: center; gap: 12px;
   width: 200px;
@@ -1067,16 +1035,6 @@ body.is-ready .hero__logo { animation: heroFloat 6s ease-in-out 1.2s infinite al
 .sponsor-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
 .sponsor-card img { width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 12px; display: block; }
 .sponsor-card__name { font-family: var(--font-en); font-weight: 700; font-size: .95rem; letter-spacing: .04em; }
-.sponsors__note {
-  margin: 32px 0 0;
-  padding: 18px 24px;
-  text-align: center;
-  font-weight: 700;
-  letter-spacing: .12em;
-  color: var(--color-primary-dark);
-  border: 2px dashed rgba(46,107,90,.4);
-  border-radius: var(--radius);
-}
 @media (max-width: 640px) {
   .sponsor-card { width: calc(50% - 8px); }
 }

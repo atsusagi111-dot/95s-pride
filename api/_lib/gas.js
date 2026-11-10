@@ -15,10 +15,4 @@ async function callGas(action, params) {
   return data;
 }
 
-// メールアドレスを照合用に揃える(不正な形式は空文字を返す)
-function normalizeEmail(value) {
-  const email = typeof value === 'string' ? value.trim().toLowerCase() : '';
-  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '';
-}
-
-module.exports = { callGas, normalizeEmail };
+module.exports = { callGas };
