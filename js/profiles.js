@@ -29,6 +29,12 @@
     return (nameItem ? nameItem.value : profile.title).trim();
   }
 
+  // フォームの日付(例: 9/6/1995)を「1995年9月6日」の形にする。日付でない回答はそのまま返す
+  function formatDate(value) {
+    var match = /^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*$/.exec(value);
+    return match ? match[3] + '年' + Number(match[1]) + '月' + Number(match[2]) + '日' : value;
+  }
+
   // 写真が登録されていない人に使う画像
   var DEFAULT_IMAGE = 'assets/members/default-avatar-2.png';
 
@@ -127,7 +133,7 @@
       var items = createElement('dl', 'profile-card__list');
       profile.items.forEach(function (item) {
         items.appendChild(createElement('dt', 'profile-card__label', item.label));
-        items.appendChild(createElement('dd', 'profile-card__value', item.value));
+        items.appendChild(createElement('dd', 'profile-card__value', formatDate(item.value)));
       });
       container.appendChild(items);
       status.hidden = true;
