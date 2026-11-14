@@ -35,6 +35,8 @@
     "SHEET_RANGE": "'Form Responses 1'!A1:ZZ",
     "MAIL_SENDER_NAME": "95s PRIDE",
     "MAIL_FROM": "95spride.official@gmail.com",
-    "MAIL_REPLY_TO": "95spride.official@gmail.com"
+    "MAIL_REPLY_TO": "95spride.official@gmail.com",
+    // これより前の回答には(GAS 時代に送信済みなので)お礼メールを送らない
+    "THANKS_MAIL_SINCE": "2026-11-14T12:00:00+09:00"
   }
 }

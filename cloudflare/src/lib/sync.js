@@ -37,10 +37,19 @@ async function importResponse(db, response, responseKey, sheetRow) {
   return slug;
 }
 
+// 移行前の回答(THANKS_MAIL_SINCE より前)には、GAS 時代に送信済みなのでお礼メールを送らない
+function isBeforeMailStart(env, respondedAt) {
+  return Boolean(env.THANKS_MAIL_SINCE) && String(respondedAt) < String(env.THANKS_MAIL_SINCE);
+}
+
 // お礼メールを送って記録する。失敗しても取り込み自体は成功として扱い、次回に再送する
 async function sendThanks(env, response, responseKey) {
   const mail = buildThanksMail(env, response.answers.q19 || '', response.answers.q2 || '');
-  if (!mail) return false;
+  if (!mail || isBeforeMailStart(env, response.respondedAt)) {
+    // 送る必要が無い回答は「対象外」として記録し、次回以降は見ない
+    await env.DB.prepare('UPDATE form_imports SET thanks_mail_sent_at = ? WHERE response_key = ? AND thanks_mail_sent_at IS NULL').bind('skipped', responseKey).run();
+    return false;
+  }
   try {
     await sendMail(env, { to: response.email, ...mail });
     await env.DB.prepare('UPDATE form_imports SET thanks_mail_sent_at = datetime(\'now\') WHERE response_key = ?').bind(responseKey).run();
@@ -74,6 +83,16 @@ export async function syncResponses(env, fetchRows = fetchSheetRows) {
     }
     const responseKey = `${response.respondedAt}|${response.email}`;
     if (!imported.has(responseKey)) {
+      // 日時の表記ゆれで鍵が一致しなくても、同じ人の同じ行がすでにあれば二重に取り込まない
+      const existing = await env.DB.prepare(
+        'SELECT p.id FROM profiles p JOIN members m ON m.id = p.member_id WHERE m.email = ? AND p.sheet_row = ?',
+      ).bind(response.email, index + 1).first();
+      if (existing) {
+        await env.DB.prepare('INSERT OR IGNORE INTO form_imports (response_key, profile_id, thanks_mail_sent_at) VALUES (?, ?, ?)').bind(responseKey, existing.id, 'skipped').run();
+        imported.set(responseKey, 'skipped');
+        summary.skipped += 1;
+        continue;
+      }
       await importResponse(env.DB, response, responseKey, index + 1);
       imported.set(responseKey, null);
       summary.imported += 1;

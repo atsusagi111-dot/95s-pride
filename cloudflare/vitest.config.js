@@ -14,6 +14,7 @@ export default defineConfig(async () => {
             TEST_MIGRATIONS: migrations,
             SESSION_SECRET: 'test-session-secret',
             MAIL_DRY_RUN: '1',
+            THANKS_MAIL_SINCE: '', // テストでは日時の足切りをしない(足切り自体は個別のテストで確かめる)
           },
         },
       }),

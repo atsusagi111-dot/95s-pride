@@ -62,4 +62,27 @@ describe('フォーム回答の取り込み', () => {
     const q20 = await env.DB.prepare('SELECT is_public FROM questions WHERE key = ?').bind('q20').first();
     expect(q20.is_public).toBe(0);
   });
+
+  it('THANKS_MAIL_SINCE より前の回答にはお礼メールを送らない', async () => {
+    sheetRows = [
+      HEADERS,
+      ['10/5/2026 22:31:33', '表示名', '太郎', '9/6/1995', 'taro@example.com', '受け取らない'],
+      ['12/1/2026 10:00:00', '表示名2', '花子', '1/2/1995', 'hanako@example.com', '受け取らない'],
+    ];
+    const result = await syncResponses({ ...env, THANKS_MAIL_SINCE: '2026-11-14T12:00:00+09:00' }, fetchRows);
+    expect(result).toEqual({ imported: 2, mailed: 1, skipped: 0 });
+    const rows = await env.DB.prepare('SELECT response_key, thanks_mail_sent_at FROM form_imports ORDER BY response_key').all();
+    expect(rows.results[0].thanks_mail_sent_at).toBe('skipped');
+    expect(rows.results[1].thanks_mail_sent_at).not.toBe('skipped');
+  });
+
+  it('日時の鍵が違っても、同じ人の同じ行があれば二重に取り込まない', async () => {
+    sheetRows = [HEADERS, ['10/5/2026 22:31:33', '表示名', '太郎', '9/6/1995', 'taro@example.com', '']];
+    expect(await syncResponses(env, fetchRows)).toEqual({ imported: 1, mailed: 0, skipped: 0 });
+    // 日時の表記が変わった(鍵が一致しない)
+    sheetRows = [HEADERS, ['10/5/2026 22:31:34', '表示名', '太郎', '9/6/1995', 'taro@example.com', '']];
+    expect(await syncResponses(env, fetchRows)).toEqual({ imported: 0, mailed: 0, skipped: 1 });
+    const n = await env.DB.prepare('SELECT count(*) AS n FROM profiles').first();
+    expect(n.n).toBe(1);
+  });
 });
