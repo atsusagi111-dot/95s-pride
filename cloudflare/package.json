@@ -1,0 +1,22 @@
+{
+  "name": "95s-pride-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-public.mjs",
+    "dev": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
+    "test": "npm run build && vitest run",
+    "migrate:local": "wrangler d1 migrations apply 95s-pride --local",
+    "migrate:remote": "wrangler d1 migrations apply 95s-pride --remote",
+    "import": "node scripts/import-responses.mjs"
+  },
+  "dependencies": {
+    "worker-mailer": "^1.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.8.2",
+    "vitest": "^4.1.12",
+    "wrangler": "^4.162.0"
+  }
+}

@@ -1,0 +1,7 @@
+node_modules/
+.wrangler/
+.dev.vars
+# 生成物(scripts/build-public.mjs が作る)
+public/
+# 回答CSVやパスワードハッシュなど、個人情報を含む作業ファイルは置かない
+data/

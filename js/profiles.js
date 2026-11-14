@@ -32,9 +32,10 @@
   // 写真が登録されていない人に使う画像
   var DEFAULT_IMAGE = 'assets/members/default-avatar-2.png';
 
+  // 写真はAPIが返す photo を優先し、無ければ上の対応表、それも無ければ共通の画像
   function createProfilePhoto(profile, className) {
     var image = createElement('img', 'member-card__image ' + className);
-    image.src = '/' + (PROFILE_IMAGES[getProfileName(profile)] || DEFAULT_IMAGE);
+    image.src = '/' + (profile.photo || PROFILE_IMAGES[getProfileName(profile)] || DEFAULT_IMAGE);
     image.alt = '';
     return image;
   }
@@ -63,11 +64,11 @@
   }
 
   /* ---------- 一覧(メンバーページ):表示名と写真だけを出し、詳細ページへリンクする ---------- */
-  // query は詳細ページのURLの「?no=」(公開)か「?m=」(会員限定)
+  // 詳細ページのURLは固定ID「?id=」。IDが無い(旧API)ときだけ順番の「?no=」(公開)か「?m=」(会員限定)
   function createProfileCard(profile, index, query) {
     var card = createElement('li', 'member-card profile-card');
     var link = createElement('a', 'profile-card__link');
-    link.href = '/profile?' + query + '=' + (index + 1);
+    link.href = profile.id ? '/profile?id=' + encodeURIComponent(profile.id) : '/profile?' + query + '=' + (index + 1);
     var photo = createProfilePhoto(profile, '');
     photo.loading = 'lazy';
     link.appendChild(photo);
@@ -106,15 +107,33 @@
   }
 
   /* ---------- 詳細ページ:公開してよい回答をすべて出す ---------- */
-  // 「?m=」なら会員限定(ログインが必要)、「?no=」なら公開のプロフィールを出す
+  // 固定IDで1件取る(会員限定ならログインしていないと 401)
+  function loadProfileById(id) {
+    return fetch('/api/profile/' + encodeURIComponent(id), { credentials: 'same-origin' }).then(function (res) {
+      if (!res.ok) {
+        var error = new Error('profile_failed');
+        error.status = res.status;
+        throw error;
+      }
+      return res.json();
+    }).then(function (data) {
+      return data.profile;
+    });
+  }
+
+  // 「?id=」なら固定IDで1件。古いURLの「?m=」(会員限定)・「?no=」(公開)は一覧の順番で探す
   function showProfileDetail(container) {
     var params = new URLSearchParams(location.search);
+    var id = params.get('id');
     var isMemberOnly = params.has('m');
     var number = Number(isMemberOnly ? params.get('m') : params.get('no'));
     var status = document.getElementById('profileStatus');
 
-    (isMemberOnly ? loadMemberProfiles() : loadProfiles()).then(function (profiles) {
-      var profile = profiles[number - 1];
+    var loading = id
+      ? loadProfileById(id)
+      : (isMemberOnly ? loadMemberProfiles() : loadProfiles()).then(function (profiles) { return profiles[number - 1]; });
+
+    loading.then(function (profile) {
       if (!profile) {
         status.textContent = 'プロフィールが見つかりませんでした。';
         return;

@@ -1,0 +1,9 @@
+# ローカル開発用の秘密(git には入れない)。本番は wrangler secret put で入れる
+SESSION_SECRET=ここにランダムな文字列
+# 開発中はメールを送らずログに出す
+MAIL_DRY_RUN=1
+# Gmail から送る場合(本番用)。2段階認証を有効にしたアカウントのアプリパスワード
+#GMAIL_USER=
+#GMAIL_APP_PASSWORD=
+# Google サービスアカウントの JSON 鍵(1行)
+#GOOGLE_SERVICE_ACCOUNT=

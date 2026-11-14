@@ -1,3 +1,6 @@
 .vercel
 .env*
 .claude/
+
+# Cloudflare wrangler の作業ファイル
+.wrangler/

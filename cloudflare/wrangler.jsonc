@@ -1,0 +1,40 @@
+{
+  // 95s PRIDE の Cloudflare Workers 設定(サイト配信 + API + D1)
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "95s-pride",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": { "enabled": true },
+
+  // 静的ファイル(scripts/build-public.mjs が public/ に集める)。/api/* と /assets/* は Worker を先に通す
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*", "/assets/*"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "95s-pride",
+      "database_id": "f132cedf-1677-477a-bf99-15e0dff5f73a",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // フォームの新しい回答を10分おきに取り込む
+  "triggers": { "crons": ["*/10 * * * *"] },
+
+  // 秘密でない設定。秘密(SESSION_SECRET, GMAIL_USER, GMAIL_APP_PASSWORD, GOOGLE_SERVICE_ACCOUNT)は wrangler secret put で入れる
+  "vars": {
+    "SHEET_ID": "1F3uJVYtRY94kgKbKkEQhZo49hf_nf5TP40hxSp0ZsFY",
+    "SHEET_RANGE": "'Form Responses 1'!A1:ZZ",
+    "MAIL_SENDER_NAME": "95s PRIDE",
+    "MAIL_FROM": "95spride.official@gmail.com",
+    "MAIL_REPLY_TO": "95spride.official@gmail.com"
+  }
+}
