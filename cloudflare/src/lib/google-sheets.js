@@ -39,14 +39,16 @@ async function getAccessToken(serviceAccount) {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion }),
   });
-  if (!res.ok) throw new Error(`Google のトークン取得に失敗しました: ${res.status}`);
+  if (!res.ok) throw new Error(`Google のトークン取得に失敗しました: ${res.status} ${(await res.text()).slice(0, 300)}`);
   return (await res.json()).access_token;
 }
 
 // 回答シートの全行(1行目は見出し)を返す
 export async function fetchSheetRows(env) {
   if (!env.GOOGLE_SERVICE_ACCOUNT) throw new Error('GOOGLE_SERVICE_ACCOUNT が設定されていません');
-  const serviceAccount = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT);
+  // PowerShell 経由で登録すると先頭に BOM などの余計な文字が付くことがあるため、最初の { から最後の } までを使う
+  const raw = env.GOOGLE_SERVICE_ACCOUNT;
+  const serviceAccount = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
   const token = await getAccessToken(serviceAccount);
   const range = encodeURIComponent(env.SHEET_RANGE || "'Form Responses 1'!A1:ZZ");
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${env.SHEET_ID}/values/${range}?valueRenderOption=FORMATTED_VALUE`;
