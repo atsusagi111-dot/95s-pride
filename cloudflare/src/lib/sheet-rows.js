@@ -74,7 +74,8 @@ export function parseResponseRow(row, questions, emailColumn) {
   const cell = (column) => String(row[column] ?? '').trim();
   const nameQuestion = questions.find((item) => item.label.startsWith('名前'));
   const birthQuestion = questions.find((item) => item.label.startsWith('生年月日'));
-  const photoQuestion = questions.find((item) => item.isPhoto);
+  // 写真の列が複数あっても(設問を作り直したときの古い列など)、ファイルが入っている最初の列を使う
+  const photoFileId = questions.filter((item) => item.isPhoto).map((item) => extractDriveFileId(cell(item.column))).find(Boolean) || null;
   const answers = {};
   for (const item of questions) {
     const value = cell(item.column);
@@ -82,7 +83,7 @@ export function parseResponseRow(row, questions, emailColumn) {
     if (value && !item.isPhoto) answers[item.key] = value;
   }
   return {
-    photoFileId: photoQuestion ? extractDriveFileId(cell(photoQuestion.column)) : null,
+    photoFileId,
     email: emailColumn >= 0 ? cell(emailColumn).toLowerCase() : '',
     respondedAt: toIso(cell(0)),
     name: (nameQuestion ? cell(nameQuestion.column) : '') || '(名前なし)',

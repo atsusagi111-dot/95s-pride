@@ -253,3 +253,17 @@ describe('番号のない写真の設問', () => {
     expect((await env.DB.prepare('SELECT count(*) AS n FROM member_photos').first()).n).toBe(0);
   });
 });
+
+describe('写真の列が複数あるシート(設問を作り直したときの古い列が残る)', () => {
+  it('ファイルが入っている列から写真を読み、古い空の列は無視する', () => {
+    const headers = ['Timestamp', 'Q2 名前 (呼ばれたいニックネーム)', 'Email Address', 'プロフィール写真（任意）', 'Q20 プロフィール写真（任意）'];
+    const questions = parseQuestions(headers);
+    expect(questions.filter((q) => q.isPhoto).length).toBe(2);
+    // 新しい列にファイルがある
+    expect(parseResponseRow(['10/5/2026 22:31:33', '太郎', 'a@example.com', PHOTO_URL, ''], questions, 2).photoFileId).toBe('1AbCdEfGhIjKlMnOpQrStUvWxYz');
+    // 古い列にだけある場合も読める
+    expect(parseResponseRow(['10/5/2026 22:31:33', '太郎', 'a@example.com', '', PHOTO_URL], questions, 2).photoFileId).toBe('1AbCdEfGhIjKlMnOpQrStUvWxYz');
+    // どちらも空
+    expect(parseResponseRow(['10/5/2026 22:31:33', '太郎', 'a@example.com', '', ''], questions, 2).photoFileId).toBeNull();
+  });
+});
