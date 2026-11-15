@@ -8,7 +8,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..', '..');
 const out = join(here, '..', 'public');
 
-const SITE_FILES = ['index.html', 'members.html', 'profile.html', 'css', 'js', 'assets'];
+const SITE_FILES = ['index.html', 'members.html', 'profile.html', 'survey.html', 'css', 'js', 'assets'];
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });

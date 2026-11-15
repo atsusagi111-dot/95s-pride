@@ -196,7 +196,7 @@ export async function handleAdmin(request, env, path, body) {
   }
   if (method === 'POST' && (m = path.match(/^profiles\/(\d+)$/))) return updateProfile(env, admin, Number(m[1]), body);
   if (method === 'POST' && (m = path.match(/^members\/(\d+)$/))) return updateMember(env, admin, Number(m[1]), body);
-  if (method === 'POST' && (m = path.match(/^questions\/(q\d+)$/))) return updateQuestion(env, admin, m[1], body);
+  if (method === 'POST' && (m = path.match(/^questions\/([a-z][a-z0-9_]*)$/))) return updateQuestion(env, admin, m[1], body);
   if (method === 'POST' && path === 'cards') return saveCard(env, admin, null, body);
   if (method === 'POST' && (m = path.match(/^cards\/(\d+)$/))) return saveCard(env, admin, Number(m[1]), body);
   if (method === 'DELETE' && (m = path.match(/^cards\/(\d+)$/))) return deleteCard(env, admin, Number(m[1]));

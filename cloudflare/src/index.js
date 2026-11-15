@@ -3,8 +3,10 @@ import { login, logout, passwordReset, verifyCode } from './routes/auth.js';
 import { memberProfiles, members, profileById, publicProfiles } from './routes/profiles.js';
 import { handleAdmin } from './routes/admin.js';
 import { servePhoto } from './routes/photos.js';
+import { surveyQuestions, surveySendCode, surveySubmit, surveyVerify } from './routes/survey.js';
 import { json, readJson } from './routes/http.js';
 import { syncResponses } from './lib/sync.js';
+import { retryThanksMails } from './lib/thanks-retry.js';
 import { cleanupExpired } from './lib/db.js';
 
 const POST_ROUTES = {
@@ -28,6 +30,11 @@ async function handleApi(request, env) {
     const body = method === 'POST' ? await readJson(request) : {};
     return handleAdmin(request, env, pathname.slice('/api/admin/'.length), body);
   }
+  // アンケート(回答の送信は写真つきの multipart なので、JSON としては読まない)
+  if (pathname === '/api/survey/submit' && method === 'POST') return surveySubmit(request, env);
+  if (pathname === '/api/survey/questions' && method === 'GET') return surveyQuestions(request, env);
+  if (pathname === '/api/survey/send-code' && method === 'POST') return surveySendCode(request, env, await readJson(request));
+  if (pathname === '/api/survey/verify' && method === 'POST') return surveyVerify(request, env, await readJson(request));
   // プロフィール写真(アンケートで送られた写真を、取り込んで保存してある)
   const photo = pathname.match(/^\/api\/photo\/([A-Za-z0-9]{4,32})$/);
   if (photo && method === 'GET') return servePhoto(request, env, photo[1]);
@@ -65,10 +72,14 @@ export default {
     }
   },
 
-  // 定期実行: フォームの新しい回答を取り込み、期限切れのコードなどを掃除する
+  // 定期実行: 期限切れのコードなどの掃除、送れなかったお礼メールの再送、(移行中のあいだだけ)Googleフォームの回答の取り込み
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
       await cleanupExpired(env.DB);
+      const resent = await retryThanksMails(env);
+      if (resent) console.log(`お礼メールを ${resent} 件再送しました`);
+      // Googleフォームをやめたら、wrangler.jsonc の SHEET_SYNC を "off" にする(取り込みの仕組みごと、あとで削除する)
+      if (env.SHEET_SYNC === 'off') return;
       // サービスアカウントが未登録のうちは取り込みを行わない(設定前にエラーを出し続けないため)
       if (!env.GOOGLE_SERVICE_ACCOUNT) {
         console.warn('GOOGLE_SERVICE_ACCOUNT が未登録のため、フォーム回答の取り込みを飛ばしました');

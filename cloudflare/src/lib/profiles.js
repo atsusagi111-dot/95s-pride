@@ -2,6 +2,7 @@
 // 公開してよい設問(questions.is_public = 1)しか含めない
 import { photoUrl } from './photos.js';
 import { formatBirthDate } from './sheet-rows.js';
+import { isSnsKey } from './sns-links.js';
 
 const SELECT_PROFILES = `
   SELECT p.id, p.slug, p.display_name, p.birth_date, p.photo_path, p.visibility, mp.updated_at AS photo_version
@@ -14,7 +15,7 @@ const SELECT_PROFILES = `
 // 会員の数だけ「?」を並べると、D1 の上限(1回に渡せる値は100個)を超えるため、結合で絞る
 async function loadAnswers(db, condition, binds) {
   const { results } = await db.prepare(`
-    SELECT a.profile_id, q.label, q.is_title, a.answer
+    SELECT a.profile_id, a.question_key, q.label, q.is_title, a.answer
     FROM profile_answers a
     JOIN profiles p ON p.id = a.profile_id
     JOIN questions q ON q.key = a.question_key
@@ -30,8 +31,12 @@ async function loadAnswers(db, condition, binds) {
 
 function buildProfile(row, answers = []) {
   const titleRow = answers.find((a) => a.is_title);
+  // SNS・リンクは、項目の一覧ではなく、アイコンのリンクとして別に渡す(念のため、http(s) 以外は出さない)
+  const links = answers
+    .filter((a) => isSnsKey(a.question_key) && /^https:\/\//.test(a.answer))
+    .map((a) => ({ kind: a.question_key.slice('sns_'.length), label: a.label, url: a.answer }));
   const items = answers
-    .filter((a) => !a.is_title)
+    .filter((a) => !a.is_title && !isSnsKey(a.question_key))
     .map((a) => ({
       label: a.label,
       // 生年月日は「1995年9月6日」の形にそろえる
@@ -43,6 +48,7 @@ function buildProfile(row, answers = []) {
     // 会員がアップロードした写真があれば優先し、なければ運営が設定した写真、どちらも無ければ null(画面側が共通のアイコンを出す)
     photo: row.photo_version ? photoUrl(row.slug, row.photo_version) : row.photo_path || null,
     items,
+    links,
   };
 }
 

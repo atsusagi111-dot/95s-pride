@@ -39,13 +39,13 @@ export async function sendMail(env, { to, subject, text }) {
 }
 
 // 確認コードのメール
-export function buildCodeMail(env, code, ttlMinutes) {
+export function buildCodeMail(env, code, ttlMinutes, place = 'メンバーページ') {
   return {
-    subject: '【95s PRIDE】メンバーページの確認コード',
+    subject: `【95s PRIDE】${place}の確認コード`,
     text: [
       `確認コード: ${code}`,
       '',
-      `${ttlMinutes}分以内に、メンバーページで入力してください。`,
+      `${ttlMinutes}分以内に、${place}で入力してください。`,
       'このメールに心当たりがない場合は、何もせず破棄してください。',
       '',
       senderName(env),

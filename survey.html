@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>プロフィールアンケート | 95s PRIDE</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2E6B5A">
+
+  <link rel="icon" type="image/svg+xml" href="assets/logo-mark.svg">
+  <link rel="apple-touch-icon" href="assets/logo.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="header header--solid" id="header">
+    <div class="container header__inner">
+      <a href="/" class="header__brand" aria-label="95s PRIDE トップへ">
+        <img src="assets/logo-mark.svg" alt="" width="40" height="40">
+        <span>95s PRIDE</span>
+      </a>
+      <button class="header__toggle" id="navToggle" aria-expanded="false" aria-controls="nav" aria-label="メニューを開く">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="nav" id="nav">
+        <ul class="nav__list">
+          <li><a href="/#about">理念</a></li>
+          <li><a href="/#pride">5つの価値観</a></li>
+          <li><a href="/#activities">活動・お知らせ</a></li>
+          <li><a href="/#members">個人活動</a></li>
+          <li><a href="/members">メンバー</a></li>
+          <li><a href="/#sponsors">協賛企業</a></li>
+          <li><a href="/#join">参加案内</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section survey">
+      <div class="container">
+        <header class="section__head">
+          <p class="section__eyebrow">PROFILE</p>
+          <h1 class="section__title">プロフィールアンケート</h1>
+          <div class="section__bar"></div>
+        </header>
+
+        <!-- 手順1: メールアドレス -->
+        <div class="login-card" id="stepEmail">
+          <form id="emailForm">
+            <p class="login-card__lead">メンバー同士が深く知り合うためのプロフィールアンケートです。はじめに、メールアドレスを確認します。確認コードをお送りします。</p>
+            <label class="login-card__label" for="surveyEmail">メールアドレス</label>
+            <input class="login-card__input" id="surveyEmail" type="email" autocomplete="email" required>
+            <button class="btn btn--primary login-card__btn" type="submit">確認コードを送る</button>
+          </form>
+        </div>
+
+        <!-- 手順2: 確認コード -->
+        <div class="login-card" id="stepCode" hidden>
+          <form id="codeForm">
+            <p class="login-card__lead"><span id="sentTo"></span> に確認コードを送りました。届かないときは、迷惑メールフォルダと、メールアドレスの入力間違いをご確認ください。</p>
+            <label class="login-card__label" for="surveyCode">確認コード(6桁)</label>
+            <input class="login-card__input login-card__input--code" id="surveyCode" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+            <button class="btn btn--primary login-card__btn" type="submit">確認する</button>
+            <button class="login-card__back" id="backToEmail" type="button">メールアドレスを入力し直す</button>
+          </form>
+        </div>
+
+        <p class="login-card__message survey__message" id="surveyMessage" role="alert" hidden></p>
+
+        <!-- 手順3: アンケート本体(設問はサーバーから読み込む) -->
+        <form class="survey__form" id="surveyForm" novalidate hidden>
+          <p class="survey__intro">各項目には回答例も記載しているので、参考にしながらざっくばらんに記入してください！</p>
+          <p class="survey__verified">確認済み: <strong id="verifiedEmail"></strong></p>
+          <div id="surveyFields"></div>
+          <button class="btn btn--primary survey__submit" id="surveySubmit" type="submit">送信する</button>
+        </form>
+
+        <!-- 送信後 -->
+        <div class="login-card survey__done" id="stepDone" hidden>
+          <h2 class="survey__done-title">ご回答ありがとうございました!</h2>
+          <p class="login-card__lead" id="doneText">回答を受け付けました。</p>
+          <a class="btn btn--primary login-card__btn" href="/members">メンバーページへ</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 回答の進み具合(アンケート本体が出ている間、画面の下に固定) -->
+  <div class="survey-progress" id="surveyProgress" hidden>
+    <div class="survey-progress__inner">
+      <p class="survey-progress__text" id="progressText" aria-live="polite"></p>
+      <div class="survey-progress__track" id="progressBar" role="progressbar" aria-label="回答の進み具合" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="survey-progress__fill" id="progressFill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== フッター ===== -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <img class="footer__logo" src="assets/logo.svg" alt="95s PRIDE" width="120" height="120" loading="lazy">
+      <p class="footer__tag">CONNECTING OUR GENERATION SINCE 1995</p>
+      <p class="footer__copy">&copy; 2026 95s PRIDE</p>
+    </div>
+  </footer>
+
+  <script src="js/main.js" defer></script>
+  <script src="js/survey.js" defer></script>
+</body>
+</html>

@@ -42,6 +42,36 @@
     return image;
   }
 
+  // SNS・リンクのアイコン(丸い背景に白い印)。固定の図なので、そのまま埋め込んでよい
+  var LINK_ICONS = {
+    x: '<path d="M6 5l12 14M18 5L6 19" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>',
+    instagram: '<rect x="5.5" y="5.5" width="13" height="13" rx="4" fill="none" stroke="#fff" stroke-width="1.9"/><circle cx="12" cy="12" r="3.1" fill="none" stroke="#fff" stroke-width="1.9"/><circle cx="16" cy="8" r="1.1" fill="#fff"/>',
+    youtube: '<rect x="4.5" y="7" width="15" height="10" rx="3" fill="#fff"/><path d="M10.6 9.6v4.8l4-2.4z" fill="#E02B20"/>',
+    tiktok: '<path d="M13.5 5v9.2a3 3 0 1 1-3-3M13.5 5c.4 2.2 1.9 3.6 4 3.8" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>',
+    other: '<circle cx="12" cy="12" r="7" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M5 12h14M12 5c-2.6 2.2-2.6 11.8 0 14M12 5c2.6 2.2 2.6 11.8 0 14" fill="none" stroke="#fff" stroke-width="1.6"/>'
+  };
+
+  // SNS・リンクのアイコンの並び。押すと、そのページが新しいタブで開く
+  function createProfileLinks(links) {
+    var list = createElement('ul', 'profile-links');
+    (links || []).forEach(function (link) {
+      // http(s) 以外は出さない(念のため)
+      if (!/^https:\/\//.test(link.url)) return;
+      var kind = LINK_ICONS[link.kind] ? link.kind : 'other';
+      var item = document.createElement('li');
+      var anchor = createElement('a', 'profile-links__item profile-links__item--' + kind);
+      anchor.href = link.url;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer nofollow';
+      anchor.title = link.label;
+      anchor.setAttribute('aria-label', link.label + 'を開く');
+      anchor.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">' + LINK_ICONS[kind] + '</svg>';
+      item.appendChild(anchor);
+      list.appendChild(item);
+    });
+    return list.children.length ? list : null;
+  }
+
   // ログインなしで見られるプロフィール
   function loadProfiles() {
     return fetch('/api/public-profiles').then(function (res) {
@@ -145,6 +175,8 @@
 
       container.appendChild(createProfilePhoto(profile, 'profile-detail__photo'));
       container.appendChild(createElement('h1', 'profile-detail__name', title));
+      var links = createProfileLinks(profile.links);
+      if (links) container.appendChild(links);
       var items = createElement('dl', 'profile-card__list');
       profile.items.forEach(function (item) {
         items.appendChild(createElement('dt', 'profile-card__label', item.label));

@@ -1220,3 +1220,50 @@ body.is-ready .hero__logo { animation: heroFloat 6s ease-in-out 1.2s infinite al
 .profile-card__label { margin-top: 14px; font-size: .78rem; font-weight: 700; letter-spacing: .04em; color: var(--color-accent-deep); }
 .profile-card__value { margin: 4px 0 0; font-size: .9rem; line-height: 1.8; white-space: pre-line; overflow-wrap: anywhere; }
 .member-card__link { margin-top: 14px; font-size: .88rem; font-weight: 700; color: var(--color-primary); }
+
+/* ===== プロフィールアンケート(survey.html) ===== */
+.survey__message { max-width: 720px; margin-inline: auto; text-align: center; }
+.survey__form { max-width: 720px; margin-inline: auto; padding: clamp(20px, 5vw, 40px); background: var(--color-white); border-radius: var(--radius); box-shadow: var(--shadow); }
+.survey__intro { margin: 0 0 8px; line-height: 1.8; }
+.survey__verified { margin: 0 0 8px; font-size: .85rem; color: var(--color-text-muted); }
+.survey__section { margin: 36px 0 0; padding-bottom: 8px; font-size: 1.05rem; color: var(--color-primary-dark); border-bottom: 2px solid var(--color-accent); }
+.survey-field { margin-top: 24px; }
+.survey-field .login-card__label { margin-bottom: 6px; line-height: 1.5; }
+.survey-field__required, .survey-field__optional { display: inline-block; margin-left: 8px; padding: 1px 8px; font-size: .7rem; font-weight: 700; vertical-align: middle; border-radius: 999px; }
+.survey-field__required { color: #fff; background: #B3362B; }
+.survey-field__optional { color: var(--color-text-muted); background: var(--color-bg-alt); }
+.survey-field__help { margin: 0 0 8px; font-size: .8rem; line-height: 1.7; color: var(--color-text-muted); white-space: pre-line; }
+.survey-field textarea.login-card__input { resize: vertical; min-height: 6.5em; }
+.survey-field__file { display: block; width: 100%; font: inherit; font-size: .9rem; }
+.survey-field__choices { display: grid; gap: 10px; }
+.survey-field__choice { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; line-height: 1.6; background: var(--color-bg); border: 1px solid rgba(46,107,90,.3); border-radius: 10px; cursor: pointer; }
+.survey-field__choice input { margin-top: 5px; accent-color: var(--color-primary); }
+.survey-field__error { margin: 6px 0 0; min-height: 0; font-size: .8rem; font-weight: 700; color: #B3362B; }
+.survey-field.is-invalid .login-card__input, .survey-field.is-invalid .survey-field__choice { border-color: #B3362B; }
+.survey__submit { display: block; width: 100%; margin-top: 36px; border: 0; cursor: pointer; font: inherit; font-weight: 700; }
+.survey__submit:disabled { opacity: .6; cursor: wait; }
+.survey__done { text-align: center; }
+.survey__done-title { margin: 0 0 16px; font-size: 1.3rem; color: var(--color-primary-dark); }
+
+/* 回答の進み具合(画面の下に固定) */
+.survey-progress { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.96); border-top: 1px solid rgba(46,107,90,.2); box-shadow: 0 -4px 16px rgba(16,46,42,.08); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.survey-progress[hidden] { display: none; }
+.survey-progress__inner { max-width: 720px; margin-inline: auto; }
+.survey-progress__text { margin: 0 0 6px; font-size: .8rem; font-weight: 700; color: var(--color-primary-dark); }
+.survey-progress__track { height: 8px; overflow: hidden; background: var(--color-bg-alt); border-radius: 999px; }
+.survey-progress__fill { width: 0; height: 100%; background: var(--grad-brand); border-radius: 999px; transition: width .3s ease; }
+/* 下の固定バーに、送信ボタンやフッターが隠れないようにする */
+body.has-survey-progress { padding-bottom: 76px; }
+@media (prefers-reduced-motion: reduce) { .survey-progress__fill { transition: none; } }
+
+/* SNS・リンク(アンケートの入力欄の見出し / プロフィールのアイコン) */
+.survey__subsection { margin: 28px 0 0; font-size: .95rem; color: var(--color-primary-dark); }
+.profile-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin: 4px 0 20px; padding: 0; list-style: none; }
+.profile-links__item { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: var(--color-primary); transition: transform .2s, box-shadow .2s; }
+.profile-links__item:hover, .profile-links__item:focus-visible { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(16,46,42,.3); }
+.profile-links__item--x, .profile-links__item--tiktok { background: #111; }
+.profile-links__item--instagram { background: linear-gradient(45deg, #F9A03F, #E4405F 55%, #7A3CC4); }
+.profile-links__item--youtube { background: #E02B20; }
+.profile-links__item--other { background: var(--color-primary); }
+/* アンケートの1行入力欄は、複数行の欄より低くする */
+.survey-field input.login-card__input { padding: 8px 14px; line-height: 1.5; }
