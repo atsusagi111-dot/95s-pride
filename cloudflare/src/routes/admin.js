@@ -5,7 +5,7 @@ import { getAdmin, getMember, logAdminAction } from '../lib/db.js';
 import { isBlockedAdmin } from '../lib/admin-policy.js';
 import { buildAdminInviteMail, sendMail } from '../lib/mail.js';
 import { syncResponses } from '../lib/sync.js';
-import { currentMember, json } from './http.js';
+import { currentMember, isCrossSite, json } from './http.js';
 
 const VISIBILITIES = ['public', 'members', 'hidden'];
 const STATUSES = ['active', 'suspended'];
@@ -21,12 +21,6 @@ async function requireAdmin(request, env) {
   return { admin };
 }
 
-// 外のサイトから送られた操作を拒否する(ブラウザは必ず Origin を付けるので、違えば他サイトからの送信)
-function isCrossSite(request) {
-  const origin = request.headers.get('origin');
-  return Boolean(origin) && origin !== new URL(request.url).origin;
-}
-
 const ownerOnly = () => json({ error: 'owner_only' }, 403);
 
 // 会員とプロフィールの一覧(管理画面の表)
@@ -34,7 +28,8 @@ async function overview(env, admin) {
   const { results: profiles } = await env.DB.prepare(`
     SELECT p.id, p.slug, p.display_name, p.responded_at, p.visibility, p.is_current, p.photo_path,
            m.id AS member_id, m.email, m.status, m.note, (m.password_hash IS NOT NULL) AS has_password,
-           (SELECT 1 FROM admins a WHERE a.email = m.email) AS is_admin
+           (SELECT 1 FROM admins a WHERE a.email = m.email) AS is_admin,
+           (SELECT 1 FROM member_photos mp WHERE mp.member_id = m.id) AS has_upload
     FROM profiles p LEFT JOIN members m ON m.id = p.member_id
     ORDER BY p.is_current DESC, p.sort_order, p.id`).all();
   const { results: cards } = await env.DB.prepare('SELECT id, name, title, bio, image_url, instagram_url, sort_order FROM member_cards ORDER BY sort_order, id').all();
@@ -100,6 +95,15 @@ async function updateMember(env, admin, id, body) {
   if (!sets.length) return json({ error: 'nothing_to_update' }, 400);
   await env.DB.prepare(`UPDATE members SET ${sets.join(', ')}, updated_at = datetime('now') WHERE id = ?`).bind(...values, id).run();
   await logAdminAction(env.DB, admin.email, action, member.email, details.join(' / ') || null);
+  return json({ ok: true });
+}
+
+// 会員がアップロードした写真を消す(不適切な写真への対応。共通のアイコンに戻る)
+async function removeMemberPhoto(env, admin, memberId) {
+  const member = await env.DB.prepare('SELECT email FROM members WHERE id = ?').bind(memberId).first();
+  if (!member) return json({ error: 'not_found' }, 404);
+  await env.DB.prepare('DELETE FROM member_photos WHERE member_id = ?').bind(memberId).run();
+  await logAdminAction(env.DB, admin.email, 'photo.remove', member.email, '会員がアップロードした写真を削除');
   return json({ ok: true });
 }
 
@@ -196,6 +200,7 @@ export async function handleAdmin(request, env, path, body) {
   if (method === 'POST' && path === 'cards') return saveCard(env, admin, null, body);
   if (method === 'POST' && (m = path.match(/^cards\/(\d+)$/))) return saveCard(env, admin, Number(m[1]), body);
   if (method === 'DELETE' && (m = path.match(/^cards\/(\d+)$/))) return deleteCard(env, admin, Number(m[1]));
+  if (method === 'DELETE' && (m = path.match(/^photos\/(\d+)$/))) return removeMemberPhoto(env, admin, Number(m[1]));
   if (method === 'POST' && path === 'admins') return inviteAdmin(request, env, admin, body);
   if (method === 'DELETE' && (m = path.match(/^admins\/(.+)$/))) {
     let email;

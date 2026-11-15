@@ -2,6 +2,7 @@
 import { login, logout, passwordReset, verifyCode } from './routes/auth.js';
 import { memberProfiles, members, profileById, publicProfiles } from './routes/profiles.js';
 import { handleAdmin } from './routes/admin.js';
+import { servePhoto } from './routes/photos.js';
 import { json, readJson } from './routes/http.js';
 import { syncResponses } from './lib/sync.js';
 import { cleanupExpired } from './lib/db.js';
@@ -27,6 +28,9 @@ async function handleApi(request, env) {
     const body = method === 'POST' ? await readJson(request) : {};
     return handleAdmin(request, env, pathname.slice('/api/admin/'.length), body);
   }
+  // プロフィール写真(アンケートで送られた写真を、取り込んで保存してある)
+  const photo = pathname.match(/^\/api\/photo\/([A-Za-z0-9]{4,32})$/);
+  if (photo && method === 'GET') return servePhoto(request, env, photo[1]);
   const byId = pathname.match(/^\/api\/profile\/([A-Za-z0-9]{4,32})$/);
   if (byId && method === 'GET') return profileById(request, env, byId[1]);
 

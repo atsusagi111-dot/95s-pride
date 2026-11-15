@@ -5,6 +5,17 @@ export const EXCLUDE_KEYWORDS = ['email', 'mail', 'メール', '電話', 'tel', 
 // カードの見出しにする設問(見出しがこの文字で始まる列)
 export const TITLE_PREFIX = 'Q1 ';
 export const EMAIL_HEADERS = ['email address', 'メールアドレス'];
+// 写真をアップロードする設問(見出しがこの文字で始まる)。回答は Google ドライブのURLで届くため、プロフィールの項目としては扱わない
+export const PHOTO_LABEL_PREFIX = 'プロフィール写真';
+
+// 「https://drive.google.com/open?id=ファイルID」や「.../file/d/ファイルID/view」から、ファイルIDを取り出す(複数あれば最初の1つ)
+export function extractDriveFileId(text) {
+  const value = String(text || '');
+  const byQuery = value.match(new RegExp('[?&]id=([A-Za-z0-9_-]{10,})'));
+  if (byQuery) return byQuery[1];
+  const byPath = value.match(new RegExp('/d/([A-Za-z0-9_-]{10,})'));
+  return byPath ? byPath[1] : null;
+}
 
 // 見出しの行から、メールアドレスの列番号(0始まり)を返す。無ければ -1
 export function findEmailColumn(headers) {
@@ -24,6 +35,7 @@ export function parseQuestions(headers) {
         column,
         isPublic: EXCLUDE_KEYWORDS.some((k) => text.includes(k)) ? 0 : 1,
         isTitle: label.startsWith(TITLE_PREFIX) ? 1 : 0,
+        isPhoto: label.replace(/^Q\d+[\s.．:：]*/, '').trim().startsWith(PHOTO_LABEL_PREFIX),
         sortOrder: index + 1,
       };
     });
@@ -55,12 +67,15 @@ export function parseResponseRow(row, questions, emailColumn) {
   const cell = (column) => String(row[column] ?? '').trim();
   const nameQuestion = questions.find((item) => item.label.startsWith('名前'));
   const birthQuestion = questions.find((item) => item.label.startsWith('生年月日'));
+  const photoQuestion = questions.find((item) => item.isPhoto);
   const answers = {};
   for (const item of questions) {
     const value = cell(item.column);
-    if (value) answers[item.key] = value;
+    // 写真の設問は、プロフィールの項目に入れない(ドライブのURLは見せない)
+    if (value && !item.isPhoto) answers[item.key] = value;
   }
   return {
+    photoFileId: photoQuestion ? extractDriveFileId(cell(photoQuestion.column)) : null,
     email: emailColumn >= 0 ? cell(emailColumn).toLowerCase() : '',
     respondedAt: toIso(cell(0)),
     name: (nameQuestion ? cell(nameQuestion.column) : '') || '(名前なし)',

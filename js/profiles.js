@@ -35,7 +35,9 @@
   // 写真はAPIが返す photo を優先し、無ければ上の対応表、それも無ければ共通の画像
   function createProfilePhoto(profile, className) {
     var image = createElement('img', 'member-card__image ' + className);
-    image.src = '/' + (profile.photo || PROFILE_IMAGES[getProfileName(profile)] || DEFAULT_IMAGE);
+    var path = profile.photo || PROFILE_IMAGES[getProfileName(profile)] || DEFAULT_IMAGE;
+    // 会員がアップロードした写真は「/api/photo/...」、運営が設定した写真は「assets/...」の形で届く
+    image.src = path.charAt(0) === '/' ? path : '/' + path;
     image.alt = '';
     return image;
   }

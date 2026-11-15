@@ -3,7 +3,8 @@
 // シートはそのサービスアカウントのメールアドレスに「閲覧者」として共有しておく
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
-const SCOPE = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
 
 function base64url(input) {
   const bytes = typeof input === 'string' ? new TextEncoder().encode(input) : new Uint8Array(input);
@@ -20,12 +21,12 @@ async function importPrivateKey(pem) {
 }
 
 // サービスアカウントでアクセストークンを取る(JWT を署名して交換する)
-async function getAccessToken(serviceAccount) {
+async function getAccessToken(serviceAccount, scope) {
   const nowSec = Math.floor(Date.now() / 1000);
   const header = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const claims = base64url(JSON.stringify({
     iss: serviceAccount.client_email,
-    scope: SCOPE,
+    scope,
     aud: TOKEN_URL,
     iat: nowSec,
     exp: nowSec + 3600,
@@ -43,16 +44,34 @@ async function getAccessToken(serviceAccount) {
   return (await res.json()).access_token;
 }
 
-// 回答シートの全行(1行目は見出し)を返す
-export async function fetchSheetRows(env) {
+// 環境変数のサービスアカウントの鍵を読む
+function readServiceAccount(env) {
   if (!env.GOOGLE_SERVICE_ACCOUNT) throw new Error('GOOGLE_SERVICE_ACCOUNT が設定されていません');
   // PowerShell 経由で登録すると先頭に BOM などの余計な文字が付くことがあるため、最初の { から最後の } までを使う
   const raw = env.GOOGLE_SERVICE_ACCOUNT;
-  const serviceAccount = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
-  const token = await getAccessToken(serviceAccount);
+  return JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
+}
+
+// 回答シートの全行(1行目は見出し)を返す
+export async function fetchSheetRows(env) {
+  const token = await getAccessToken(readServiceAccount(env), SHEETS_SCOPE);
   const range = encodeURIComponent(env.SHEET_RANGE || "'Form Responses 1'!A1:ZZ");
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${env.SHEET_ID}/values/${range}?valueRenderOption=FORMATTED_VALUE`;
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error(`シートの読み取りに失敗しました: ${res.status}`);
   return (await res.json()).values || [];
+}
+
+// フォームでアップロードされたファイル(写真)を、ドライブから読む
+// フォームの回答ファイルを入れるフォルダを、サービスアカウントに「閲覧者」で共有しておく
+export async function fetchDriveFile(env, fileId, maxBytes) {
+  const token = await getAccessToken(readServiceAccount(env), DRIVE_SCOPE);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`写真の読み取りに失敗しました: ${res.status}`);
+  if (Number(res.headers.get('content-length') || 0) > maxBytes) throw new Error('写真のサイズが大きすぎます');
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  if (bytes.length > maxBytes) throw new Error('写真のサイズが大きすぎます');
+  return bytes;
 }

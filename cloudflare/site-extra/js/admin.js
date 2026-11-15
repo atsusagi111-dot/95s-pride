@@ -23,6 +23,7 @@
     'card.create': '紹介カードを追加',
     'card.update': '紹介カードを更新',
     'card.delete': '紹介カードを削除',
+    'photo.remove': '会員の写真を削除',
     'admin.invite': '運営メンバーを招待',
     'admin.remove': '運営メンバーを解除',
     'sync': '回答を取り込み'
@@ -166,6 +167,20 @@
         save('/api/admin/profiles/' + p.id, { photo_path: photo.value }, '写真を変えました');
       });
       photoCell.appendChild(photo);
+      if (p.has_upload) {
+        // 会員が自分でアップロードした写真がある(こちらが優先して表示される)
+        var uploaded = el('div', 'note', 'アンケートで送られた写真あり(この写真が優先されます)');
+        var removePhoto = el('button', 'danger', '送られた写真を削除');
+        removePhoto.addEventListener('click', function () {
+          if (!window.confirm(p.display_name + ' さんの、アンケートで送られた写真を削除しますか?\n(共通のアイコンに戻ります。次にアンケートを送り直したときに、写真が入っていれば、また表示されます)')) return;
+          request('/api/admin/photos/' + p.member_id, 'DELETE').then(function (result) {
+            showMessage(result.ok ? '写真を削除しました' : '削除できませんでした', result.ok);
+            load();
+          });
+        });
+        photoCell.appendChild(uploaded);
+        photoCell.appendChild(removePhoto);
+      }
       tr.appendChild(photoCell);
 
       tr.appendChild(renderLoginCell(p));

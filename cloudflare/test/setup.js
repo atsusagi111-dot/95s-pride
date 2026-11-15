@@ -4,7 +4,7 @@ import { applyD1Migrations, env } from 'cloudflare:test';
 
 await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
 
-const TABLES = ['admin_log', 'form_imports', 'rate_limits', 'auth_codes', 'admins', 'member_cards', 'profile_answers', 'profiles', 'questions', 'members'];
+const TABLES = ['member_photos', 'admin_log', 'form_imports', 'rate_limits', 'auth_codes', 'admins', 'member_cards', 'profile_answers', 'profiles', 'questions', 'members'];
 
 beforeEach(async () => {
   await env.DB.batch(TABLES.map((table) => env.DB.prepare(`DELETE FROM ${table}`)));

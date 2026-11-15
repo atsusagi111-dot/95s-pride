@@ -1,6 +1,7 @@
 // フォームの新しい回答をシートから D1 に取り込み、お礼メールを送る(定期実行と管理画面の「今すぐ取り込み」から呼ぶ)
 import { randomBytes } from 'node:crypto';
-import { fetchSheetRows } from './google-sheets.js';
+import { fetchDriveFile, fetchSheetRows } from './google-sheets.js';
+import { MAX_PHOTO_BYTES, MAX_SOURCE_BYTES, isJpeg, resizeToJpeg, saveMemberPhoto } from './photos.js';
 import { findEmailColumn, parseQuestions, parseResponseRow } from './sheet-rows.js';
 import { buildThanksMail, sendMail } from './mail.js';
 
@@ -8,9 +9,14 @@ function makeSlug() {
   return randomBytes(6).toString('base64url').replace(/[-_]/g, 'x').slice(0, 8);
 }
 
-// 新しい設問があれば「非公開」で登録する(勝手に公開しない)
+// 写真の取り込みを、1回の実行でいくつまで行うか(実行時間を使いすぎないため。残りは次の実行で行う)
+const MAX_PHOTOS_PER_RUN = 3;
+// 写真の取り込みに失敗したとき、あきらめるまでの回数
+const MAX_PHOTO_ATTEMPTS = 5;
+
+// 新しい設問があれば「非公開」で登録する(勝手に公開しない)。写真の設問は、プロフィールの項目にしない
 async function upsertQuestions(db, questions) {
-  const statements = questions.map((q) => db
+  const statements = questions.filter((q) => !q.isPhoto).map((q) => db
     .prepare('INSERT OR IGNORE INTO questions (key, label, is_public, is_title, sort_order) VALUES (?, ?, 0, ?, ?)')
     .bind(q.key, q.label, q.isTitle, q.sortOrder));
   if (statements.length) await db.batch(statements);
@@ -32,7 +38,9 @@ async function importResponse(db, response, responseKey, sheetRow) {
   for (const [key, answer] of Object.entries(response.answers)) {
     statements.push(db.prepare('INSERT INTO profile_answers (profile_id, question_key, answer) VALUES ((SELECT id FROM profiles WHERE slug = ?), ?, ?)').bind(slug, key, answer));
   }
-  statements.push(db.prepare('INSERT INTO form_imports (response_key, profile_id) VALUES (?, (SELECT id FROM profiles WHERE slug = ?))').bind(responseKey, slug));
+  // 写真がアップロードされていれば、あとで取り込む(photo_state = 'pending')
+  statements.push(db.prepare('INSERT INTO form_imports (response_key, profile_id, photo_file_id, photo_state) VALUES (?, (SELECT id FROM profiles WHERE slug = ?), ?, ?)')
+    .bind(responseKey, slug, response.photoFileId, response.photoFileId ? 'pending' : null));
   await db.batch(statements);
   return slug;
 }
@@ -60,8 +68,35 @@ async function sendThanks(env, response, responseKey) {
   }
 }
 
-// fetchRows はテストで差し替えられるようにしてある(通常は Google シートを読む)
-export async function syncResponses(env, fetchRows = fetchSheetRows) {
+// アンケートでアップロードされた写真を、ドライブから読み、正方形に縮めて保存する
+// 失敗しても回答の取り込みは止めない。次の実行でやり直し、5回失敗したらあきらめる(写真が無い扱い)
+async function syncPendingPhotos(env, tools) {
+  const { results } = await env.DB.prepare(`
+    SELECT fi.response_key, fi.photo_file_id, fi.photo_attempts, p.member_id
+    FROM form_imports fi JOIN profiles p ON p.id = fi.profile_id
+    WHERE fi.photo_state = 'pending' AND p.member_id IS NOT NULL
+    ORDER BY fi.imported_at, fi.response_key LIMIT ?`).bind(MAX_PHOTOS_PER_RUN).all();
+  let saved = 0;
+  for (const row of results) {
+    try {
+      const source = await tools.fetchFile(env, row.photo_file_id, MAX_SOURCE_BYTES);
+      const jpeg = await tools.resize(env, source);
+      if (!isJpeg(jpeg) || jpeg.length > MAX_PHOTO_BYTES) throw new Error('写真を縮められませんでした');
+      await saveMemberPhoto(env.DB, row.member_id, jpeg);
+      await env.DB.prepare("UPDATE form_imports SET photo_state = 'done' WHERE response_key = ?").bind(row.response_key).run();
+      saved += 1;
+    } catch (error) {
+      const attempts = row.photo_attempts + 1;
+      console.error(`写真の取り込みに失敗しました(${attempts}回目、ファイル ${row.photo_file_id}):`, error);
+      await env.DB.prepare('UPDATE form_imports SET photo_attempts = ?, photo_state = ? WHERE response_key = ?')
+        .bind(attempts, attempts >= MAX_PHOTO_ATTEMPTS ? 'failed' : 'pending', row.response_key).run();
+    }
+  }
+  return saved;
+}
+
+// fetchRows と photoTools はテストで差し替えられるようにしてある(通常は Google のシート・ドライブと、Cloudflare の画像変換を使う)
+export async function syncResponses(env, fetchRows = fetchSheetRows, photoTools = { fetchFile: fetchDriveFile, resize: resizeToJpeg }) {
   const rows = await fetchRows(env);
   if (rows.length < 2) return { imported: 0, mailed: 0, skipped: 0 };
   const headers = rows[0];
@@ -74,6 +109,12 @@ export async function syncResponses(env, fetchRows = fetchSheetRows) {
   const imported = new Map(results.map((r) => [r.response_key, r.thanks_mail_sent_at]));
 
   const summary = { imported: 0, mailed: 0, skipped: 0 };
+  // 取り込んだあとに写真を処理する(新しい回答の写真と、前回失敗した写真)
+  const finish = async () => {
+    const photos = await syncPendingPhotos(env, photoTools);
+    if (photos) console.log(`写真を ${photos} 件取り込みました`);
+    return summary;
+  };
   for (let index = 1; index < rows.length; index += 1) {
     const response = parseResponseRow(rows[index], questions, emailColumn);
     // メールアドレスの無い回答は会員と結び付けられないので取り込まない
@@ -103,5 +144,5 @@ export async function syncResponses(env, fetchRows = fetchSheetRows) {
       summary.mailed += 1;
     }
   }
-  return summary;
+  return finish();
 }

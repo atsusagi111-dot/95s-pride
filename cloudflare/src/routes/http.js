@@ -18,6 +18,12 @@ export async function currentMember(request, env) {
   return isAllowed(member) ? member : null;
 }
 
+// 外のサイトから送られた操作かを調べる(ブラウザは必ず Origin を付けるので、違えば他サイトからの送信)
+export function isCrossSite(request) {
+  const origin = request.headers.get('origin');
+  return Boolean(origin) && origin !== new URL(request.url).origin;
+}
+
 export async function readJson(request) {
   try {
     return (await request.json()) || {};

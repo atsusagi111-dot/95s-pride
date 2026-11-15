@@ -1,10 +1,12 @@
 // プロフィールを画面用の形 { id, title, photo, items: [{ label, value }] } に組み立てる
 // 公開してよい設問(questions.is_public = 1)しか含めない
+import { photoUrl } from './photos.js';
 import { formatBirthDate } from './sheet-rows.js';
 
 const SELECT_PROFILES = `
-  SELECT p.id, p.slug, p.display_name, p.birth_date, p.photo_path, p.visibility
+  SELECT p.id, p.slug, p.display_name, p.birth_date, p.photo_path, p.visibility, mp.updated_at AS photo_version
   FROM profiles p
+  LEFT JOIN member_photos mp ON mp.member_id = p.member_id
   WHERE p.is_current = 1`;
 
 // 条件に合うプロフィールの回答を、プロフィールごとにまとめて返す
@@ -38,7 +40,8 @@ function buildProfile(row, answers = []) {
   return {
     id: row.slug,
     title: titleRow ? titleRow.answer : '',
-    photo: row.photo_path || null,
+    // 会員がアップロードした写真があれば優先し、なければ運営が設定した写真、どちらも無ければ null(画面側が共通のアイコンを出す)
+    photo: row.photo_version ? photoUrl(row.slug, row.photo_version) : row.photo_path || null,
     items,
   };
 }

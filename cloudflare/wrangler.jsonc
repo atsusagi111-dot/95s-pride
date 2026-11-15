@@ -18,6 +18,9 @@
     "run_worker_first": ["/api/*", "/assets/*"]
   },
 
+  // 画像の縮小(アンケートの写真を、正方形・小さなサイズにする)
+  "images": { "binding": "IMAGES" },
+
   "d1_databases": [
     {
       "binding": "DB",
