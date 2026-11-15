@@ -81,3 +81,39 @@ describe('運営による写真の削除', () => {
     expect(del.status).toBe(403);
   });
 });
+
+describe('運営による写真の差し替え', () => {
+  const upload = (memberId, cookie, fields = {}, headers = {}) => {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(fields)) form.append(key, value);
+    return SELF.fetch(`https://example.com/api/admin/photos/${memberId}`, { method: 'POST', body: form, headers: { ...(cookie ? { Cookie: cookie } : {}), ...headers } });
+  };
+
+  async function setup() {
+    const { memberId } = await seedMember({ email: 'a@example.com', password: 'password123', visibility: 'public', slug: 'pub00001' });
+    await seedMember({ email: 'admin@example.com', password: 'password123', slug: 'adm00001', admin: true });
+    return { memberId, adminCookie: await loginAs('admin@example.com', 'password123') };
+  }
+
+  it('運営でない人・ログインしていない人は、写真を差し替えられない', async () => {
+    const { memberId } = await setup();
+    await seedMember({ email: 'b@example.com', password: 'password123', slug: 'other001' });
+    expect((await upload(memberId, null)).status).toBe(401);
+    expect((await upload(memberId, await loginAs('b@example.com', 'password123'))).status).toBe(403);
+  });
+
+  it('写真が選ばれていない・画像として読めない・知らない会員のときは、写真を変えずに断る', async () => {
+    const { memberId, adminCookie } = await setup();
+    expect(await (await upload(memberId, adminCookie)).json()).toEqual({ error: 'no_photo' });
+    const bad = await upload(memberId, adminCookie, { photo: new File([new Uint8Array([1, 2, 3])], 'x.txt') });
+    expect(bad.status).toBe(400);
+    expect((await bad.json()).error).toBe('invalid_photo');
+    expect((await upload(99999, adminCookie, { photo: new File([new Uint8Array([1])], 'x.png') })).status).toBe(404);
+    expect((await get('/api/photo/pub00001')).status).toBe(404);
+  });
+
+  it('他のサイトからの送信は断る', async () => {
+    const { memberId, adminCookie } = await setup();
+    expect((await upload(memberId, adminCookie, {}, { Origin: 'https://evil.example' })).status).toBe(403);
+  });
+});

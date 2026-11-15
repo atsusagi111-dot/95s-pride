@@ -23,6 +23,7 @@
     'card.create': '紹介カードを追加',
     'card.update': '紹介カードを更新',
     'card.delete': '紹介カードを削除',
+    'photo.upload': '会員の写真を差し替え',
     'photo.remove': '会員の写真を削除',
     'admin.invite': '運営メンバーを招待',
     'admin.remove': '運営メンバーを解除',
@@ -52,7 +53,9 @@
     cannot_remove_owner: 'オーナーは、この画面から外せません',
     cannot_suspend_admin: '運営の人は、この画面から停止できません',
     cross_site: '別のサイトからの操作は受け付けません',
-    invalid_photo: '写真は assets/members/ のファイル名で入力してください',
+    invalid_photo: '写真を読み込めませんでした。別の写真を選んでください',
+    photo_too_large: '写真のサイズが大きすぎます(15MBまで)',
+    no_photo: '写真を選んでください',
     https_only: '画像とInstagramは https:// で始まるURLにしてください',
     name_required: '名前を入れてください'
   };
@@ -61,6 +64,39 @@
     message.textContent = text || '';
     message.hidden = !text;
     message.className = ok ? 'msg msg--ok' : 'msg';
+  }
+
+  // 写真を選んで差し替える(会員ごとに1枚。正方形に自動で整える)
+  function renderPhotoUpload(p) {
+    var box = el('div', 'photo-upload');
+    var input = el('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    var button = el('button', '', '写真を差し替える');
+    button.addEventListener('click', function () {
+      var file = input.files[0];
+      if (!file) { showMessage('先に、差し替える写真を選んでください'); return; }
+      if (!window.confirm(p.display_name + ' さんの写真を、選んだ写真に差し替えますか?\n(この人のプロフィールすべてで、この写真が使われます)')) return;
+      var body = new FormData();
+      body.append('photo', file);
+      button.disabled = true;
+      showMessage('アップロードしています');
+      fetch('/api/admin/photos/' + p.member_id, { method: 'POST', credentials: 'same-origin', body: body })
+        .then(function (res) { return res.json().catch(function () { return {}; }).then(function (data) { return { ok: res.ok, data: data }; }); })
+        .then(function (result) {
+          button.disabled = false;
+          if (!result.ok) {
+            showMessage('差し替えできませんでした: ' + (ERROR_TEXT[result.data.error] || result.data.error || '時間をおいて、もう一度お試しください'));
+            return;
+          }
+          showMessage('写真を差し替えました', true);
+          load();
+        })
+        .catch(function () { button.disabled = false; showMessage('差し替えできませんでした'); });
+    });
+    box.appendChild(input);
+    box.appendChild(button);
+    return box;
   }
 
   function el(tag, className, text) {
@@ -181,6 +217,7 @@
         photoCell.appendChild(uploaded);
         photoCell.appendChild(removePhoto);
       }
+      if (p.member_id) photoCell.appendChild(renderPhotoUpload(p));
       tr.appendChild(photoCell);
 
       tr.appendChild(renderLoginCell(p));

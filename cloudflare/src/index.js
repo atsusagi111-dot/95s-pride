@@ -26,7 +26,8 @@ async function handleApi(request, env) {
   const { method } = request;
 
   if (pathname.startsWith('/api/admin/')) {
-    const body = method === 'POST' ? await readJson(request) : {};
+    const isUpload = (request.headers.get('content-type') || '').startsWith('multipart/form-data');
+    const body = method === 'POST' && !isUpload ? await readJson(request) : {};
     return handleAdmin(request, env, pathname.slice('/api/admin/'.length), body);
   }
   // アンケート(回答の送信は写真つきの multipart なので、JSON としては読まない)

@@ -4,6 +4,8 @@ import { normalizeEmail } from '../lib/credentials.js';
 import { getAdmin, getMember, logAdminAction } from '../lib/db.js';
 import { isBlockedAdmin } from '../lib/admin-policy.js';
 import { buildAdminInviteMail, sendMail } from '../lib/mail.js';
+import { saveMemberPhoto } from '../lib/photos.js';
+import { prepareSurveyPhoto } from '../lib/survey.js';
 import { currentMember, isCrossSite, json } from './http.js';
 
 const VISIBILITIES = ['public', 'members', 'hidden'];
@@ -94,6 +96,29 @@ async function updateMember(env, admin, id, body) {
   if (!sets.length) return json({ error: 'nothing_to_update' }, 400);
   await env.DB.prepare(`UPDATE members SET ${sets.join(', ')}, updated_at = datetime('now') WHERE id = ?`).bind(...values, id).run();
   await logAdminAction(env.DB, admin.email, action, member.email, details.join(' / ') || null);
+  return json({ ok: true });
+}
+
+// 会員の写真を、運営が差し替える(会員ごとに1枚。その人のどのプロフィールにも使われる)
+// アンケートの写真と同じように、正方形・小さなサイズに縮める
+async function uploadMemberPhoto(request, env, admin, memberId) {
+  const member = await env.DB.prepare('SELECT email FROM members WHERE id = ?').bind(memberId).first();
+  if (!member) return json({ error: 'not_found' }, 404);
+  let file = null;
+  try {
+    file = (await request.formData()).get('photo');
+  } catch {
+    return json({ error: 'invalid_request' }, 400);
+  }
+  let jpeg = null;
+  try {
+    jpeg = await prepareSurveyPhoto(env, file);
+  } catch (error) {
+    return json({ error: error.message === 'photo_too_large' ? 'photo_too_large' : 'invalid_photo' }, 400);
+  }
+  if (!jpeg) return json({ error: 'no_photo' }, 400);
+  await saveMemberPhoto(env.DB, memberId, jpeg);
+  await logAdminAction(env.DB, admin.email, 'photo.upload', member.email, '運営が写真を差し替え');
   return json({ ok: true });
 }
 
@@ -194,6 +219,7 @@ export async function handleAdmin(request, env, path, body) {
   if (method === 'POST' && path === 'cards') return saveCard(env, admin, null, body);
   if (method === 'POST' && (m = path.match(/^cards\/(\d+)$/))) return saveCard(env, admin, Number(m[1]), body);
   if (method === 'DELETE' && (m = path.match(/^cards\/(\d+)$/))) return deleteCard(env, admin, Number(m[1]));
+  if (method === 'POST' && (m = path.match(/^photos\/(\d+)$/))) return uploadMemberPhoto(request, env, admin, Number(m[1]));
   if (method === 'DELETE' && (m = path.match(/^photos\/(\d+)$/))) return removeMemberPhoto(env, admin, Number(m[1]));
   if (method === 'POST' && path === 'admins') return inviteAdmin(request, env, admin, body);
   if (method === 'DELETE' && (m = path.match(/^admins\/(.+)$/))) {
