@@ -64,23 +64,65 @@ describe('管理API', () => {
     expect((await get('/api/admin/overview', cookie)).status).toBe(403);
   });
 
-  it('運営は公開範囲と停止を変えられる', async () => {
-    const { profileId } = await seedMember({ email: 'a@example.com', password: 'password123', visibility: 'members', slug: 'target01' });
-    const { memberId } = await seedMember({ email: 'admin@example.com', password: 'password123', slug: 'admin001', admin: true });
+  it('オーナーは公開範囲と停止を変えられ、運営の人は止められない', async () => {
+    const { profileId, memberId } = await seedMember({ email: 'a@example.com', password: 'password123', visibility: 'members', slug: 'target01' });
+    const { memberId: adminMemberId } = await seedMember({ email: 'admin@example.com', password: 'password123', slug: 'admin001', admin: true });
     const cookie = await loginAs('admin@example.com', 'password123');
 
     const overview = await (await get('/api/admin/overview', cookie)).json();
     expect(overview.profiles.length).toBe(2);
-    expect(overview.profiles.some((p) => p.email === 'a@example.com')).toBe(true);
+    expect(overview.me).toEqual({ email: 'admin@example.com', role: 'owner' });
+    expect(overview.admins).toEqual([{ email: 'admin@example.com', role: 'owner' }]);
 
     expect((await post(`/api/admin/profiles/${profileId}`, { visibility: 'public' }, cookie)).status).toBe(200);
     const { profiles } = await (await get('/api/public-profiles')).json();
     expect(profiles.map((p) => p.id)).toContain('target01');
-
     expect((await post(`/api/admin/profiles/${profileId}`, { visibility: 'secret' }, cookie)).status).toBe(400);
+
+    // 運営の人(自分を含む)は画面から停止できない
+    const self = await post(`/api/admin/members/${adminMemberId}`, { status: 'suspended' }, cookie);
+    expect(self.status).toBe(400);
+    expect((await self.json()).error).toBe('cannot_suspend_admin');
+
+    // ふつうの会員は停止でき、停止するとログインできない
     expect((await post(`/api/admin/members/${memberId}`, { status: 'suspended' }, cookie)).status).toBe(200);
-    // 自分を停止したので、以後の管理APIは 401
-    expect((await get('/api/admin/overview', cookie)).status).toBe(401);
+    expect((await post('/api/auth/login', { email: 'a@example.com', password: 'password123' })).status).toBe(401);
+  });
+
+  it('編集者は停止・再開と設問の公開設定ができない', async () => {
+    const { memberId } = await seedMember({ email: 'a@example.com', password: 'password123', slug: 'target01' });
+    const { profileId } = await seedMember({ email: 'editor@example.com', password: 'password123', slug: 'editor01', admin: true, role: 'editor' });
+    const cookie = await loginAs('editor@example.com', 'password123');
+
+    expect((await post(`/api/admin/members/${memberId}`, { status: 'suspended' }, cookie)).status).toBe(403);
+    expect((await post('/api/admin/questions/q4', { is_public: false }, cookie)).status).toBe(403);
+    // 公開範囲・メモ・紹介カードはできる
+    expect((await post(`/api/admin/profiles/${profileId}`, { visibility: 'hidden' }, cookie)).status).toBe(200);
+    expect((await post(`/api/admin/members/${memberId}`, { note: '連絡済み' }, cookie)).status).toBe(200);
+    expect((await post('/api/admin/cards', { name: '花子' }, cookie)).status).toBe(200);
+    const overview = await (await get('/api/admin/overview', cookie)).json();
+    expect(overview.me.role).toBe('editor');
+  });
+
+  it('別のサイトから送られた操作は拒否する', async () => {
+    await seedMember({ email: 'admin@example.com', password: 'password123', admin: true });
+    const cookie = await loginAs('admin@example.com', 'password123');
+    const evil = await post('/api/admin/cards', { name: '偽物' }, cookie, { Origin: 'https://evil.example.net' });
+    expect(evil.status).toBe(403);
+    expect((await evil.json()).error).toBe('cross_site');
+    const same = await post('/api/admin/cards', { name: '本物' }, cookie, { Origin: 'https://example.com' });
+    expect(same.status).toBe(200);
+  });
+
+  it('運営の操作が記録に残る', async () => {
+    const { profileId } = await seedMember({ email: 'a@example.com', visibility: 'members', slug: 'target01', name: '対象さん' });
+    await seedMember({ email: 'admin@example.com', password: 'password123', slug: 'admin001', admin: true });
+    const cookie = await loginAs('admin@example.com', 'password123');
+    await post(`/api/admin/profiles/${profileId}`, { visibility: 'public' }, cookie);
+    const { log } = await (await get('/api/admin/overview', cookie)).json();
+    expect(log.length).toBe(1);
+    expect(log[0]).toMatchObject({ admin_email: 'admin@example.com', action: 'profile.update', target: '対象さん' });
+    expect(log[0].detail).toContain('会員限定 → 公開');
   });
 
   it('紹介カードを追加・更新・削除できる', async () => {

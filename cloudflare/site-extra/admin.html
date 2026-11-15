@@ -7,7 +7,7 @@
   <title>運営管理 | 95s PRIDE</title>
   <link rel="icon" href="/assets/logo-mark.svg" type="image/svg+xml">
   <style>
-    :root { --ink: #1f1f1f; --muted: #6b6b6b; --line: #e3e3e3; --accent: #c8102e; --bg: #fafafa; }
+    :root { --ink: #1f1f1f; --muted: #6b6b6b; --line: #e3e3e3; --accent: #c8102e; --ok: #1b7a34; --bg: #fafafa; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif; color: var(--ink); background: var(--bg); line-height: 1.6; }
     .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
@@ -15,12 +15,13 @@
     h2 { font-size: 1.1rem; margin: 32px 0 8px; border-left: 4px solid var(--accent); padding-left: 10px; }
     .sub { color: var(--muted); font-size: .9rem; margin: 0 0 16px; }
     .msg { padding: 10px 14px; border-radius: 8px; background: #fff3f3; color: var(--accent); margin: 12px 0; }
-    .msg--ok { background: #eefaf0; color: #1b7a34; }
+    .msg--ok { background: #eefaf0; color: var(--ok); }
+    .me { display: inline-block; padding: 4px 12px; border-radius: 999px; background: #eef3ff; color: #1a4fa0; font-size: .85rem; margin: 0 0 12px; }
     .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0 16px; }
     button, select, input, textarea { font: inherit; }
     button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; cursor: pointer; }
     button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-    button.danger { color: var(--accent); }
+    button.danger { color: var(--accent); border-color: #f0b8c0; }
     button:disabled { opacity: .5; cursor: default; }
     table { width: 100%; border-collapse: collapse; background: #fff; font-size: .9rem; }
     th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
@@ -29,17 +30,25 @@
     td.email { color: var(--muted); font-size: .85rem; word-break: break-all; }
     .old { color: var(--muted); }
     .old td.name::after { content: "(旧回答)"; font-weight: 400; font-size: .8rem; margin-left: 6px; }
-    .tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .75rem; background: #eee; }
+    .tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; background: #eee; color: #444; }
+    .tag--ok { background: #e3f6e8; color: var(--ok); }
     .tag--sus { background: #fde2e2; color: var(--accent); }
-    .tag--pub { background: #e2f0fd; color: #1a5fa8; }
+    .tag--none { background: #f0f0f0; color: var(--muted); }
+    .state { display: grid; gap: 4px; justify-items: start; min-width: 150px; }
+    .state small { color: var(--muted); font-size: .75rem; }
     select { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; }
     input[type=text], input[type=url], textarea { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; }
     textarea { min-height: 60px; }
+    details { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 0 0 16px; font-size: .9rem; }
+    details summary { cursor: pointer; font-weight: 600; }
+    details dl { margin: 10px 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; }
+    details dd { margin: 0; color: var(--muted); }
     .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
     .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 6px; }
     .card label { font-size: .8rem; color: var(--muted); }
     .card .row { display: flex; gap: 8px; justify-content: flex-end; }
     .note { font-size: .8rem; color: var(--muted); }
+    .log td { font-size: .85rem; }
     @media (max-width: 720px) { table { font-size: .8rem; } th, td { padding: 6px; } }
   </style>
 </head>
@@ -49,10 +58,11 @@
     <p class="sub">メンバーの公開範囲・ログイン停止・紹介カードをここで変えます。変更はすぐにサイトに反映されます。</p>
 
     <div id="guard" hidden>
-      <p class="msg">運営メンバーとして <a href="/members">メンバーページ</a> でログインしてから、このページを開いてください。</p>
+      <p class="msg">運営メンバーとして <a href="/members">メンバーページ</a> でログインしてから、このページを開いてください。<br>運営として登録されていない人は、この画面を使えません。</p>
     </div>
 
     <div id="app" hidden>
+      <p class="me" id="me"></p>
       <div class="bar">
         <button id="reload">再読み込み</button>
         <button id="sync">フォームの回答を今すぐ取り込む</button>
@@ -61,22 +71,50 @@
       <p id="message" class="msg" hidden></p>
 
       <h2>メンバーとプロフィール</h2>
-      <p class="sub">「公開」は誰でも見られる、「会員限定」はログインした人だけ、「非表示」はどこにも出しません。</p>
+      <p class="sub">「公開範囲」は、だれに見せるかです。「公開」はだれでも、「会員限定」はログインした人だけ、「非表示」はどこにも出しません。</p>
+      <details>
+        <summary>「ログインの状態」の見方</summary>
+        <dl>
+          <dt><span class="tag tag--ok">ログインできる</span></dt>
+          <dd>パスワードを決めた人です。いつでもログインできます。</dd>
+          <dt><span class="tag tag--none">まだ使い始めていない</span></dt>
+          <dd>アンケートには回答したが、まだパスワードを決めていない人です。問題ではありません。</dd>
+          <dt><span class="tag tag--sus">ログイン停止中</span></dt>
+          <dd>運営が止めた人です。「再開する」を押すと、戻ります。</dd>
+          <dt><span class="tag tag--none">ログインできません</span></dt>
+          <dd>メールアドレスのない回答です。会員としては扱いません。</dd>
+        </dl>
+        <p class="note">この欄は、「いまログインしている」という意味ではありません。「停止する」を押すと、その人は次にページを開いたときから見られなくなります。</p>
+      </details>
       <table>
         <thead>
-          <tr><th>名前</th><th>メール</th><th>回答日</th><th>公開範囲</th><th>写真</th><th>ログイン</th><th>メモ</th></tr>
+          <tr><th>名前</th><th>メール</th><th>回答日</th><th>公開範囲</th><th>写真</th><th>ログインの状態</th><th>メモ</th></tr>
         </thead>
         <tbody id="profiles"></tbody>
       </table>
 
       <h2>設問の公開設定</h2>
-      <p class="sub">チェックを入れた設問だけが、公開プロフィールと会員限定プロフィールに表示されます。メールアドレスは常に非公開です。</p>
+      <p class="sub">チェックを入れた設問だけが、公開プロフィールと会員限定プロフィールに表示されます。メールアドレスは常に非公開です。<span id="ownerNote1"></span></p>
       <div id="questions" class="cards"></div>
 
       <h2>紹介カード(ログイン後のメンバー一覧)</h2>
       <p class="sub">以前の「メンバー掲載」シートの代わりです。画像とInstagramは https:// で始まるURLだけ使えます。</p>
       <div id="cards" class="cards"></div>
       <div class="bar"><button id="addCard" class="primary">カードを追加</button></div>
+
+      <h2>この画面を使える人</h2>
+      <p class="sub">オーナーは、すべての操作ができます。編集者は、ログインの停止・再開と、設問の公開設定ができません。人の追加・削除は、サイト担当者だけができます。</p>
+      <table>
+        <thead><tr><th>メール</th><th>権限</th></tr></thead>
+        <tbody id="admins"></tbody>
+      </table>
+
+      <h2>操作の記録(新しい順に30件)</h2>
+      <p class="sub">いつ、だれが、何をしたかを記録しています。</p>
+      <table class="log">
+        <thead><tr><th>日時</th><th>だれが</th><th>何を</th><th>対象</th><th>内容</th></tr></thead>
+        <tbody id="log"></tbody>
+      </table>
     </div>
   </div>
   <script src="/js/admin.js" defer></script>

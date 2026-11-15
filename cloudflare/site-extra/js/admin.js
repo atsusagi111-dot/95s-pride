@@ -8,8 +8,24 @@
   var profilesBody = document.getElementById('profiles');
   var questionsBox = document.getElementById('questions');
   var cardsBox = document.getElementById('cards');
+  var adminsBody = document.getElementById('admins');
+  var logBody = document.getElementById('log');
+  var meLabel = document.getElementById('me');
 
   var VISIBILITY_LABELS = { public: '公開', members: '会員限定', hidden: '非表示' };
+  var ROLE_LABELS = { owner: 'オーナー', editor: '編集者' };
+  var ACTION_LABELS = {
+    'profile.update': 'プロフィールを変更',
+    'member.suspend': 'ログインを停止',
+    'member.resume': 'ログインを再開',
+    'member.note': 'メモを変更',
+    'question.public': '設問の公開設定',
+    'card.create': '紹介カードを追加',
+    'card.update': '紹介カードを更新',
+    'card.delete': '紹介カードを削除',
+    'sync': '回答を取り込み'
+  };
+  var isOwner = false;
 
   function request(path, method, body) {
     var options = { method: method || 'GET', credentials: 'same-origin' };
@@ -23,6 +39,15 @@
       });
     });
   }
+
+  var ERROR_TEXT = {
+    owner_only: 'この操作はオーナーだけができます',
+    cannot_suspend_admin: '運営の人は、この画面から停止できません',
+    cross_site: '別のサイトからの操作は受け付けません',
+    invalid_photo: '写真は assets/members/ のファイル名で入力してください',
+    https_only: '画像とInstagramは https:// で始まるURLにしてください',
+    name_required: '名前を入れてください'
+  };
 
   function showMessage(text, ok) {
     message.textContent = text || '';
@@ -41,11 +66,20 @@
     return iso ? iso.slice(0, 10).replace(/-/g, '/') : '';
   }
 
+  // 保存すると日本時間の「月/日 時:分」で表示する(記録は UTC で入っている)
+  function formatDateTime(utc) {
+    if (!utc) return '';
+    var d = new Date(utc.replace(' ', 'T') + 'Z');
+    if (isNaN(d)) return utc;
+    return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+
   // 変更を保存して一覧を読み直す
   function save(path, body, okText) {
     return request(path, 'POST', body).then(function (result) {
       if (!result.ok) {
-        showMessage('保存できませんでした(' + (result.data.error || result.status) + ')');
+        showMessage('保存できませんでした: ' + (ERROR_TEXT[result.data.error] || result.data.error || result.status));
+        load();
         return;
       }
       showMessage(okText || '保存しました', true);
@@ -54,6 +88,48 @@
   }
 
   /* ---------- メンバーとプロフィール ---------- */
+  // 「ログインの状態」の列。言葉で状態を示し、押せるボタンは1つだけにする
+  function renderLoginCell(p) {
+    var cell = el('td');
+    var box = el('div', 'state');
+    if (!p.member_id) {
+      box.appendChild(el('span', 'tag tag--none', 'ログインできません'));
+      box.appendChild(el('small', '', 'メールアドレスなし'));
+      cell.appendChild(box);
+      return cell;
+    }
+    if (p.status === 'suspended') {
+      box.appendChild(el('span', 'tag tag--sus', 'ログイン停止中'));
+    } else if (p.has_password) {
+      box.appendChild(el('span', 'tag tag--ok', 'ログインできる'));
+      box.appendChild(el('small', '', 'パスワード設定済み'));
+    } else {
+      box.appendChild(el('span', 'tag tag--none', 'まだ使い始めていない'));
+      box.appendChild(el('small', '', 'パスワード未設定'));
+    }
+
+    var suspended = p.status === 'suspended';
+    var toggle = el('button', suspended ? '' : 'danger', suspended ? '再開する' : '停止する');
+    if (p.is_admin) {
+      toggle.disabled = true;
+      toggle.title = '運営の人は、この画面から停止できません';
+    } else if (!isOwner) {
+      toggle.disabled = true;
+      toggle.title = 'オーナーだけができます';
+    }
+    toggle.addEventListener('click', function () {
+      var next = suspended ? 'active' : 'suspended';
+      var question = suspended
+        ? p.display_name + ' さんのログインを再開しますか?'
+        : p.display_name + ' さんのログインを停止しますか?\n(次にページを開いたときから、見られなくなります。あとで「再開する」で戻せます)';
+      if (!window.confirm(question)) return;
+      save('/api/admin/members/' + p.member_id, { status: next }, p.display_name + ' さんのログインを' + (next === 'suspended' ? '停止' : '再開') + 'しました');
+    });
+    box.appendChild(toggle);
+    cell.appendChild(box);
+    return cell;
+  }
+
   function renderProfiles(profiles) {
     profilesBody.textContent = '';
     profiles.forEach(function (p) {
@@ -88,20 +164,7 @@
       photoCell.appendChild(photo);
       tr.appendChild(photoCell);
 
-      var loginCell = el('td');
-      if (p.member_id) {
-        loginCell.appendChild(el('span', 'tag' + (p.status === 'suspended' ? ' tag--sus' : ''), p.status === 'suspended' ? '停止中' : (p.has_password ? '設定済み' : '未設定')));
-        var toggle = el('button', p.status === 'suspended' ? '' : 'danger', p.status === 'suspended' ? '再開' : '停止');
-        toggle.style.marginLeft = '6px';
-        toggle.addEventListener('click', function () {
-          var next = p.status === 'suspended' ? 'active' : 'suspended';
-          save('/api/admin/members/' + p.member_id, { status: next }, p.display_name + ' のログインを' + (next === 'suspended' ? '停止' : '再開') + 'しました');
-        });
-        loginCell.appendChild(toggle);
-      } else {
-        loginCell.appendChild(el('span', 'note', 'ログイン不可'));
-      }
-      tr.appendChild(loginCell);
+      tr.appendChild(renderLoginCell(p));
 
       var noteCell = el('td');
       if (p.member_id) {
@@ -127,6 +190,7 @@
       var check = el('input');
       check.type = 'checkbox';
       check.checked = Boolean(q.is_public);
+      check.disabled = !isOwner;
       check.addEventListener('change', function () {
         save('/api/admin/questions/' + q.key, { is_public: check.checked }, '「' + q.label + '」を' + (check.checked ? '公開' : '非公開') + 'にしました');
       });
@@ -136,6 +200,7 @@
       card.appendChild(line);
       questionsBox.appendChild(card);
     });
+    document.getElementById('ownerNote1').textContent = isOwner ? '' : '(この設定は、オーナーだけが変えられます)';
   }
 
   /* ---------- 紹介カード ---------- */
@@ -165,6 +230,7 @@
     if (card.id) {
       var remove = el('button', 'danger', '削除');
       remove.addEventListener('click', function () {
+        if (!window.confirm('「' + card.name + '」のカードを削除しますか?')) return;
         request('/api/admin/cards/' + card.id, 'DELETE').then(function (result) {
           showMessage(result.ok ? '削除しました' : '削除できませんでした', result.ok);
           load();
@@ -189,6 +255,38 @@
     cards.forEach(function (card) { cardsBox.appendChild(renderCard(card)); });
   }
 
+  /* ---------- この画面を使える人 / 操作の記録 ---------- */
+  function renderAdmins(admins, me) {
+    adminsBody.textContent = '';
+    admins.forEach(function (a) {
+      var tr = el('tr');
+      tr.appendChild(el('td', 'email', a.email + (a.email === me.email ? '(あなた)' : '')));
+      tr.appendChild(el('td', '', ROLE_LABELS[a.role] || a.role));
+      adminsBody.appendChild(tr);
+    });
+  }
+
+  function renderLog(log) {
+    logBody.textContent = '';
+    if (!log.length) {
+      var tr = el('tr');
+      var td = el('td', 'note', 'まだ記録はありません');
+      td.colSpan = 5;
+      tr.appendChild(td);
+      logBody.appendChild(tr);
+      return;
+    }
+    log.forEach(function (entry) {
+      var tr = el('tr');
+      tr.appendChild(el('td', '', formatDateTime(entry.at)));
+      tr.appendChild(el('td', 'email', entry.admin_email));
+      tr.appendChild(el('td', '', ACTION_LABELS[entry.action] || entry.action));
+      tr.appendChild(el('td', '', entry.target || ''));
+      tr.appendChild(el('td', '', entry.detail || ''));
+      logBody.appendChild(tr);
+    });
+  }
+
   /* ---------- 読み込み ---------- */
   function load() {
     return request('/api/admin/overview').then(function (result) {
@@ -197,11 +295,16 @@
         app.hidden = true;
         return;
       }
+      var data = result.data;
+      isOwner = data.me.role === 'owner';
       guard.hidden = true;
       app.hidden = false;
-      renderProfiles(result.data.profiles || []);
-      renderQuestions(result.data.questions || []);
-      renderCards(result.data.cards || []);
+      meLabel.textContent = 'ログイン中: ' + data.me.email + '(' + (ROLE_LABELS[data.me.role] || data.me.role) + ')';
+      renderProfiles(data.profiles || []);
+      renderQuestions(data.questions || []);
+      renderCards(data.cards || []);
+      renderAdmins(data.admins || [], data.me);
+      renderLog(data.log || []);
     }).catch(function () {
       guard.hidden = false;
     });

@@ -11,7 +11,7 @@ export const QUESTIONS = [
 ];
 
 // 会員・プロフィール・回答を1件ずつ入れて、作った ID を返す
-export async function seedMember({ email, password, status = 'active', visibility = 'public', name = 'テスト', slug = 'abcd1234', admin = false }) {
+export async function seedMember({ email, password, status = 'active', visibility = 'public', name = 'テスト', slug = 'abcd1234', admin = false, role = 'owner' }) {
   const passwordHash = password ? await hashPassword(password) : null;
   await env.DB.batch(QUESTIONS.map((q) => env.DB.prepare('INSERT OR IGNORE INTO questions (key, label, is_public, is_title, sort_order) VALUES (?, ?, ?, ?, ?)').bind(...q)));
   await env.DB.prepare('INSERT INTO members (email, password_hash, status) VALUES (?, ?, ?)').bind(email, passwordHash, status).run();
@@ -25,14 +25,14 @@ export async function seedMember({ email, password, status = 'active', visibilit
     env.DB.prepare('INSERT INTO profile_answers (profile_id, question_key, answer) VALUES (?, ?, ?)').bind(profile.id, 'q3', '9/6/1995'),
     env.DB.prepare('INSERT INTO profile_answers (profile_id, question_key, answer) VALUES (?, ?, ?)').bind(profile.id, 'q19', '受け取らない'),
   ]);
-  if (admin) await env.DB.prepare('INSERT INTO admins (email) VALUES (?)').bind(email).run();
+  if (admin) await env.DB.prepare('INSERT INTO admins (email, role) VALUES (?, ?)').bind(email, role).run();
   return { memberId: member.id, profileId: profile.id, slug };
 }
 
-export function post(path, body, cookie) {
+export function post(path, body, cookie, extraHeaders = {}) {
   return SELF.fetch(`https://example.com${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
+    headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}), ...extraHeaders },
     body: JSON.stringify(body),
   });
 }

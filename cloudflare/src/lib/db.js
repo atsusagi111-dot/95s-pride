@@ -12,10 +12,24 @@ export function isAllowed(member) {
   return Boolean(member) && member.status === 'active';
 }
 
+// 運営として登録されていれば { email, role } を返す。いなければ null
+export async function getAdmin(db, email) {
+  if (!email) return null;
+  return db.prepare('SELECT email, role FROM admins WHERE email = ?').bind(email).first();
+}
+
 export async function isAdmin(db, email) {
-  if (!email) return false;
-  const row = await db.prepare('SELECT 1 AS ok FROM admins WHERE email = ?').bind(email).first();
-  return Boolean(row);
+  return Boolean(await getAdmin(db, email));
+}
+
+// 運営の操作を記録する(記録に失敗しても、操作そのものは止めない)
+export async function logAdminAction(db, adminEmail, action, target = null, detail = null) {
+  try {
+    await db.prepare('INSERT INTO admin_log (admin_email, action, target, detail) VALUES (?, ?, ?, ?)')
+      .bind(adminEmail, action, target, detail).run();
+  } catch (error) {
+    console.error('操作の記録に失敗しました:', error);
+  }
 }
 
 /* ---------- 回数制限(GAS の CacheService の置き換え) ---------- */
