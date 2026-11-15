@@ -211,3 +211,33 @@ describe('運営による写真の削除', () => {
     expect(del.status).toBe(403);
   });
 });
+
+describe('番号のない写真の設問', () => {
+  const UNNUMBERED = ['Timestamp', 'Q1 オプチャの表示名', 'Q2 名前 (呼ばれたいニックネーム)', 'プロフィール写真（任意）', 'Q3 生年月日', 'Email Address', 'Q19 プロフィール回答特典について'];
+
+  it('番号がなくても、写真の設問として読め、ほかの設問の番号と並び順は変わらない', () => {
+    const questions = parseQuestions(UNNUMBERED);
+    expect(questions.map((q) => q.key)).toEqual(['q1', 'q2', 'photo', 'q3', 'q19']);
+    expect(questions.find((q) => q.key === 'photo').isPhoto).toBe(true);
+    // 写真を除いた並び順(1, 2, 3, 4)になる
+    expect(questions.filter((q) => !q.isPhoto).map((q) => q.sortOrder)).toEqual([1, 2, 3, 4]);
+
+    const parsed = parseResponseRow(['10/5/2026 22:31:33', '表示名', '太郎', PHOTO_URL, '9/6/1995', 'a@example.com', ''], questions, 5);
+    expect(parsed.photoFileId).toBe('1AbCdEfGhIjKlMnOpQrStUvWxYz');
+    expect(parsed.answers.photo).toBeUndefined();
+    expect(parsed.answers.q3).toBe('9/6/1995');
+  });
+
+  it('写真の欄が空の回答、写真の列がまだ無いシートでも、そのまま取り込める', async () => {
+    const { tools, calls } = makeTools();
+    const old = ['Timestamp', 'Q1 オプチャの表示名', 'Q2 名前 (呼ばれたいニックネーム)', 'Q3 生年月日', 'Email Address', 'Q19 プロフィール回答特典について'];
+    await syncResponses(env, async () => [old, ['10/5/2026 22:31:33', '表示名', '太郎', '9/6/1995', 'a@example.com', '']], tools);
+    expect((await env.DB.prepare('SELECT count(*) AS n FROM profiles').first()).n).toBe(1);
+    // 写真の列が後から増えても、すでに取り込んだ回答は変わらない
+    const withPhoto = [...old, 'プロフィール写真（任意）'];
+    const result = await syncResponses(env, async () => [withPhoto, ['10/5/2026 22:31:33', '表示名', '太郎', '9/6/1995', 'a@example.com', '', '']], tools);
+    expect(result.imported).toBe(0);
+    expect(calls.fetched).toEqual([]);
+    expect((await env.DB.prepare('SELECT count(*) AS n FROM member_photos').first()).n).toBe(0);
+  });
+});
