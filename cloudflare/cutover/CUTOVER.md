@@ -64,4 +64,4 @@
   - 開いたページに応じて、新サイトの同じページへのリンクを出す(`/members` → 新サイトの `/members`)
   - `.vercelignore` で旧API(`api/`)を公開から外した。旧サイトからは、ログインや会員情報は取れない
 - 転送設定の控え: `vercel.redirect.json`、元の設定: `vercel.original.json`(戻すときに使う)
-- お礼メールは GAS が送り続けている。新サイトは `THANKS_MAIL_SINCE` を先の日付にして送らない。GAS のトリガーを削除したら、その時刻に更新する
+- お礼メールの担当は、2026-11-15 05:00(日本時間)から新サイトに移した(GAS のトリガー onProfileFormSubmit は、オーナーの 95spride.official アカウントで削除済み。戻すときは Apps Script で setupTrigger() を実行)
