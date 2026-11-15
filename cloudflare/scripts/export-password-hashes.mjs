@@ -42,7 +42,8 @@ for (const email of emails) {
   }
   if (passwordHash) {
     withHash += 1;
-    sql.push(`UPDATE members SET password_hash = ${q(passwordHash)} WHERE email = ${q(email)};`);
+    // 検証サイトで本人が決め直したパスワードを上書きしないよう、未設定の人だけに入れる
+    sql.push(`UPDATE members SET password_hash = ${q(passwordHash)} WHERE email = ${q(email)} AND password_hash IS NULL;`);
   }
   console.log(`${email}: ${passwordHash ? 'パスワード設定済み' : '未設定'}`);
 }

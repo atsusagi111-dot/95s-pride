@@ -1,0 +1,10 @@
+{
+  "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/:path*",
+      "destination": "https://95s-pride.inquiry-router.workers.dev/:path*",
+      "permanent": false
+    }
+  ]
+}

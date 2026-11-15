@@ -37,7 +37,7 @@
     "MAIL_SENDER_NAME": "95s PRIDE",
     "MAIL_FROM": "95spride.official@gmail.com",
     "MAIL_REPLY_TO": "95spride.official@gmail.com",
-    // これより前の回答には(GAS 時代に送信済みなので)お礼メールを送らない
-    "THANKS_MAIL_SINCE": "2026-11-14T12:00:00+09:00"
+    // これより前の回答には、お礼メールを送らない(切り替え前は旧サイトの GAS が送るため、二重送信を防ぐ)。切り替え当日に、GAS のトリガーを止めた時刻へ更新する
+    "THANKS_MAIL_SINCE": "2026-11-19T12:00:00+09:00"
   }
 }
