@@ -9,6 +9,11 @@ on:
     branches: [main]
   pull_request:
 
+# 続けて push したときに、公開が同時に走らないようにする(古い公開が新しい公開を上書きするのを防ぐ)
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   test:
     runs-on: ubuntu-latest

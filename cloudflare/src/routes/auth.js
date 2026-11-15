@@ -2,7 +2,7 @@
 import { randomInt } from 'node:crypto';
 import { hashPassword, isValidPassword, normalizeEmail, verifyPassword } from '../lib/credentials.js';
 import { clearSessionCookie, createSessionCookie } from '../lib/session.js';
-import { bumpCount, clearCount, consumeCode, getCount, getMember, isAllowed, saveCode } from '../lib/db.js';
+import { bumpCount, clearCount, consumeCode, getMember, isAllowed, saveCode } from '../lib/db.js';
 import { buildCodeMail, sendMail } from '../lib/mail.js';
 import { json } from './http.js';
 
@@ -20,9 +20,9 @@ export async function login(request, env, body) {
   const { password } = body;
   if (!email || !isValidPassword(password)) return json({ error: 'invalid_credentials' }, 401);
 
+  // 先に回数を数えてから調べる。同時に大量の試行が来ても、上限を超えて試せない
   const attemptsKey = `login-attempts:${email}`;
-  if ((await getCount(env.DB, attemptsKey)) >= LOGIN_ATTEMPT_LIMIT) return json({ error: 'too_many_attempts' }, 429);
-  await bumpCount(env.DB, attemptsKey, LOGIN_LOCK_SECONDS);
+  if ((await bumpCount(env.DB, attemptsKey, LOGIN_LOCK_SECONDS)) > LOGIN_ATTEMPT_LIMIT) return json({ error: 'too_many_attempts' }, 429);
 
   const member = await getMember(env.DB, email);
   // 停止中・未登録でも同じ計算をして、応答時間で区別できないようにする
@@ -46,17 +46,15 @@ export async function passwordReset(request, env, body) {
   if (!isAllowed(member)) return json({ error: 'not_registered' }, 404);
 
   // 再送の間隔と回数の上限。超えていても画面の動きを変えない(GAS と同じ)
-  const cooldownKey = `send-cooldown:${email}`;
-  const countKey = `send-count:${email}`;
-  if ((await getCount(env.DB, cooldownKey)) > 0 || (await getCount(env.DB, countKey)) >= MAX_SENDS_PER_WINDOW) {
+  // 先に回数を数えてから送る。同時に何件来ても、メールは1通しか送られない
+  const inCooldown = (await bumpCount(env.DB, `send-cooldown:${email}`, RESEND_INTERVAL_SECONDS)) > 1;
+  if (inCooldown || (await bumpCount(env.DB, `send-count:${email}`, RESEND_WINDOW_SECONDS)) > MAX_SENDS_PER_WINDOW) {
     return json({ ok: true });
   }
 
   const code = String(randomInt(0, 1000000)).padStart(6, '0');
   await sendMail(env, { to: email, ...buildCodeMail(env, code, CODE_TTL_SECONDS / 60) });
   await saveCode(env.DB, email, code, CODE_TTL_SECONDS);
-  await bumpCount(env.DB, cooldownKey, RESEND_INTERVAL_SECONDS);
-  await bumpCount(env.DB, countKey, RESEND_WINDOW_SECONDS);
   return json({ ok: true });
 }
 

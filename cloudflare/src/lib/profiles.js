@@ -3,18 +3,21 @@
 import { formatBirthDate } from './sheet-rows.js';
 
 const SELECT_PROFILES = `
-  SELECT p.id, p.slug, p.display_name, p.birth_date, p.photo_path, p.visibility, p.sort_order
+  SELECT p.id, p.slug, p.display_name, p.birth_date, p.photo_path, p.visibility
   FROM profiles p
   WHERE p.is_current = 1`;
 
-async function loadAnswers(db, profileIds) {
-  if (!profileIds.length) return new Map();
-  const placeholders = profileIds.map(() => '?').join(',');
+// 条件に合うプロフィールの回答を、プロフィールごとにまとめて返す
+// condition は、この中の固定の文字列だけを渡す(利用者の入力は binds で渡す)
+// 会員の数だけ「?」を並べると、D1 の上限(1回に渡せる値は100個)を超えるため、結合で絞る
+async function loadAnswers(db, condition, binds) {
   const { results } = await db.prepare(`
-    SELECT a.profile_id, q.key, q.label, q.is_title, a.answer
-    FROM profile_answers a JOIN questions q ON q.key = a.question_key
-    WHERE q.is_public = 1 AND a.profile_id IN (${placeholders})
-    ORDER BY a.profile_id, q.sort_order`).bind(...profileIds).all();
+    SELECT a.profile_id, q.label, q.is_title, a.answer
+    FROM profile_answers a
+    JOIN profiles p ON p.id = a.profile_id
+    JOIN questions q ON q.key = a.question_key
+    WHERE q.is_public = 1 AND p.is_current = 1 AND ${condition}
+    ORDER BY a.profile_id, q.sort_order`).bind(...binds).all();
   const byProfile = new Map();
   for (const row of results) {
     if (!byProfile.has(row.profile_id)) byProfile.set(row.profile_id, []);
@@ -23,7 +26,7 @@ async function loadAnswers(db, profileIds) {
   return byProfile;
 }
 
-function buildProfile(row, answers) {
+function buildProfile(row, answers = []) {
   const titleRow = answers.find((a) => a.is_title);
   const items = answers
     .filter((a) => !a.is_title)
@@ -43,16 +46,16 @@ function buildProfile(row, answers) {
 // visibility('public' / 'members')のプロフィール一覧
 export async function listProfiles(db, visibility) {
   const { results } = await db.prepare(`${SELECT_PROFILES} AND p.visibility = ? ORDER BY p.sort_order, p.id`).bind(visibility).all();
-  const answers = await loadAnswers(db, results.map((r) => r.id));
-  return results.map((row) => buildProfile(row, answers.get(row.id) || []));
+  const answers = await loadAnswers(db, 'p.visibility = ?', [visibility]);
+  return results.map((row) => buildProfile(row, answers.get(row.id)));
 }
 
 // slug で1件取る。見つからなければ null。{ profile, visibility } を返す
 export async function getProfile(db, slug) {
   const row = await db.prepare(`${SELECT_PROFILES} AND p.slug = ?`).bind(slug).first();
   if (!row) return null;
-  const answers = await loadAnswers(db, [row.id]);
-  return { profile: buildProfile(row, answers.get(row.id) || []), visibility: row.visibility };
+  const answers = await loadAnswers(db, 'p.slug = ?', [slug]);
+  return { profile: buildProfile(row, answers.get(row.id)), visibility: row.visibility };
 }
 
 // 「メンバー掲載」(ログイン後の紹介カード)

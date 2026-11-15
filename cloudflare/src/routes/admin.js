@@ -197,6 +197,14 @@ export async function handleAdmin(request, env, path, body) {
   if (method === 'POST' && (m = path.match(/^cards\/(\d+)$/))) return saveCard(env, admin, Number(m[1]), body);
   if (method === 'DELETE' && (m = path.match(/^cards\/(\d+)$/))) return deleteCard(env, admin, Number(m[1]));
   if (method === 'POST' && path === 'admins') return inviteAdmin(request, env, admin, body);
-  if (method === 'DELETE' && (m = path.match(/^admins\/(.+)$/))) return removeAdmin(env, admin, decodeURIComponent(m[1]).toLowerCase());
+  if (method === 'DELETE' && (m = path.match(/^admins\/(.+)$/))) {
+    let email;
+    try {
+      email = decodeURIComponent(m[1]).toLowerCase();
+    } catch {
+      return json({ error: 'invalid_email' }, 400); // 不正な文字列は 503 ではなく 400 で返す
+    }
+    return removeAdmin(env, admin, email);
+  }
   return json({ error: 'not_found' }, 404);
 }

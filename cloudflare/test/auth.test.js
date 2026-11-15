@@ -89,3 +89,31 @@ describe('会員限定の判定', () => {
     expect((await get('/api/member-profiles', cookie)).status).toBe(401);
   });
 });
+
+describe('同時アクセスでも、回数の上限が守られる', () => {
+  it('確認コードは、同時に何件推測しても5回までしか試せない', async () => {
+    await seedMember({ email: 'a@example.com', password: null });
+    const { saveCode, consumeCode } = await import('../src/lib/db.js');
+    await saveCode(env.DB, 'a@example.com', '123456', 600);
+    // 同時に20件の間違った推測。そのうち、実際に照合されたのは5件まで
+    await Promise.all(Array.from({ length: 20 }, () => consumeCode(env.DB, 'a@example.com', '999999', 5)));
+    const row = await env.DB.prepare('SELECT count(*) AS n FROM auth_codes WHERE email = ?').bind('a@example.com').first();
+    expect(row.n).toBe(0); // 5回で無効になった
+    expect(await consumeCode(env.DB, 'a@example.com', '123456', 5)).toBe(false);
+  });
+
+  it('確認コードの再送は、同時に何件来ても1回しか送られない', async () => {
+    await seedMember({ email: 'a@example.com', password: null });
+    await Promise.all(Array.from({ length: 5 }, () => post('/api/auth/password-reset', { email: 'a@example.com' })));
+    const send = await env.DB.prepare('SELECT count FROM rate_limits WHERE key = ?').bind('send-count:a@example.com').first();
+    expect(send.count).toBe(1);
+  });
+
+  it('ログインの試行は、同時に20件来ても10回までしか照合されない', async () => {
+    await seedMember({ email: 'a@example.com', password: 'password123' });
+    const results = await Promise.all(Array.from({ length: 20 }, () => post('/api/auth/login', { email: 'a@example.com', password: 'wrong-password' })));
+    const statuses = results.map((r) => r.status);
+    expect(statuses.filter((s) => s === 401).length).toBe(10);
+    expect(statuses.filter((s) => s === 429).length).toBe(10);
+  });
+});

@@ -18,10 +18,6 @@ export async function getAdmin(db, email) {
   return db.prepare('SELECT email, role FROM admins WHERE email = ?').bind(email).first();
 }
 
-export async function isAdmin(db, email) {
-  return Boolean(await getAdmin(db, email));
-}
-
 // 運営の操作を記録する(記録に失敗しても、操作そのものは止めない)
 export async function logAdminAction(db, adminEmail, action, target = null, detail = null) {
   try {
@@ -34,23 +30,16 @@ export async function logAdminAction(db, adminEmail, action, target = null, deta
 
 /* ---------- 回数制限(GAS の CacheService の置き換え) ---------- */
 
-// 期限内の回数を返す(期限切れは 0)
-export async function getCount(db, key) {
-  const row = await db.prepare('SELECT count, expires_at FROM rate_limits WHERE key = ?').bind(key).first();
-  return row && row.expires_at > now() ? row.count : 0;
-}
-
-// 回数を1増やして返す。期限切れなら 1 から数え直す。ttlSeconds は最初の1回からの期限
+// 回数を1増やして、増やしたあとの回数を返す。期限切れなら 1 から数え直す。ttlSeconds は最初の1回からの期限
+// 1回の命令で数えるので、同時に何件来ても数え漏れない
 export async function bumpCount(db, key, ttlSeconds) {
-  const current = await getCount(db, key);
-  const count = current + 1;
-  const expiresAt = current === 0 ? now() + ttlSeconds : undefined;
-  if (expiresAt) {
-    await db.prepare('INSERT OR REPLACE INTO rate_limits (key, count, expires_at) VALUES (?, ?, ?)').bind(key, count, expiresAt).run();
-  } else {
-    await db.prepare('UPDATE rate_limits SET count = ? WHERE key = ?').bind(count, key).run();
-  }
-  return count;
+  const row = await db.prepare(`
+    INSERT INTO rate_limits (key, count, expires_at) VALUES (?1, 1, ?2 + ?3)
+    ON CONFLICT(key) DO UPDATE SET
+      count = CASE WHEN expires_at <= ?2 THEN 1 ELSE count + 1 END,
+      expires_at = CASE WHEN expires_at <= ?2 THEN ?2 + ?3 ELSE expires_at END
+    RETURNING count`).bind(key, now(), ttlSeconds).first();
+  return row.count;
 }
 
 export async function clearCount(db, key) {
@@ -69,19 +58,17 @@ export async function saveCode(db, email, code, ttlSeconds) {
 }
 
 // コードを照合する。正しければ消して true。間違いは回数を数え、上限で消す
+// 先に試行回数を1増やしてから照合する。同時に大量の推測が来ても、上限(maxAttempts 回)を超えて試せない
 export async function consumeCode(db, email, code, maxAttempts) {
-  const row = await db.prepare('SELECT code_hash, attempts, expires_at FROM auth_codes WHERE email = ?').bind(email).first();
-  if (!row || row.expires_at <= now()) return false;
-  if (row.code_hash === hashCode(email, code)) {
+  const row = await db.prepare(
+    'UPDATE auth_codes SET attempts = attempts + 1 WHERE email = ? AND expires_at > ? AND attempts < ? RETURNING code_hash, attempts',
+  ).bind(email, now(), maxAttempts).first();
+  if (!row) return false;
+  const matched = row.code_hash === hashCode(email, code);
+  if (matched || row.attempts >= maxAttempts) {
     await db.prepare('DELETE FROM auth_codes WHERE email = ?').bind(email).run();
-    return true;
   }
-  if (row.attempts + 1 >= maxAttempts) {
-    await db.prepare('DELETE FROM auth_codes WHERE email = ?').bind(email).run();
-  } else {
-    await db.prepare('UPDATE auth_codes SET attempts = attempts + 1 WHERE email = ?').bind(email).run();
-  }
-  return false;
+  return matched;
 }
 
 // 期限切れの行を掃除する(定期実行から呼ぶ)

@@ -191,3 +191,18 @@ describe('管理API', () => {
     expect(members).toEqual([{ name: '太郎', title: '会社員', bio: '', image: '', instagram: 'https://instagram.com/taro' }]);
   });
 });
+
+describe('会員が多くても、一覧が返る', () => {
+  it('会員限定のプロフィールが150件あっても、エラーにならない(D1 は1回に渡せる値が100個まで)', async () => {
+    await seedMember({ email: 'first@example.com', password: 'password123', visibility: 'members', slug: 'first001' });
+    const statements = [];
+    for (let i = 0; i < 149; i += 1) {
+      statements.push(env.DB.prepare('INSERT INTO profiles (slug, display_name, visibility, is_current, sort_order) VALUES (?, ?, ?, 1, ?)').bind(`bulk${String(i).padStart(4, '0')}`, `人${i}`, 'members', i + 2));
+    }
+    await env.DB.batch(statements);
+    const cookie = await loginAs('first@example.com', 'password123');
+    const res = await get('/api/member-profiles', cookie);
+    expect(res.status).toBe(200);
+    expect((await res.json()).profiles.length).toBe(150);
+  });
+});
