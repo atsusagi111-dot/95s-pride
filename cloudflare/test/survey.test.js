@@ -6,6 +6,7 @@ import { createTicket, readTicket } from '../src/lib/survey-ticket.js';
 import { prepareSurveyPhoto, validateAnswers } from '../src/lib/survey.js';
 import { normalizeSnsLink } from '../src/lib/sns-links.js';
 import { getProfile } from '../src/lib/profiles.js';
+import { buildThanksMail, MEMBERS_PAGE_URL } from '../src/lib/mail.js';
 import { retryThanksMails } from '../src/lib/thanks-retry.js';
 
 const ACCEPT = 'プロフィール回答特典（なんでもお悩み相談15分～30分）を受け取る';
@@ -284,5 +285,16 @@ describe('お礼メールの再送', () => {
     await env.DB.prepare("DELETE FROM profile_answers WHERE question_key = 'q19'").run();
     expect(await retryThanksMails(env)).toBe(0);
     expect(await sentAt()).toBe('skipped');
+  });
+});
+
+describe('お礼メールの文面', () => {
+  it('相談を希望する・しないのどちらでも、メンバーページのリンクを載せる', () => {
+    for (const choice of [ACCEPT, '受け取らない']) {
+      const { text } = buildThanksMail(env, choice, 'たろう');
+      expect(text).toContain('自分を含む他メンバーのプロフィール回答は、以下のリンクで閲覧できます。');
+      expect(text).toContain('https://95s-pride.inquiry-router.workers.dev/members');
+    }
+    expect(MEMBERS_PAGE_URL).toBe('https://95s-pride.inquiry-router.workers.dev/members');
   });
 });

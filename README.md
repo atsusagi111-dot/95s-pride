@@ -5,7 +5,7 @@
 - 公式サイト: https://95s-pride.inquiry-router.workers.dev
 - メンバー紹介: https://95s-pride.inquiry-router.workers.dev/members
 - 運営管理画面: https://95s-pride.inquiry-router.workers.dev/admin(運営のみ)
-- プロフィールアンケート(会員登録を兼ねる): [Googleフォーム](https://docs.google.com/forms/d/e/1FAIpQLSfeHKnrNRJpZ7EFMmod2a2JNQmQKbJfdzNyyz22lW2AiuGj9w/viewform)
+- プロフィールアンケート(会員登録を兼ねる): https://95s-pride.inquiry-router.workers.dev/survey(メール確認つき。写真・SNSリンクも送れます)
 
 旧URL(`95s-pride.vercel.app`)を開くと、新サイトへの案内ページが出ます。
 
@@ -18,7 +18,8 @@
                                 │
                                 └─▶ Gmail(確認コード・お礼メール)
 
-Googleフォーム ─▶ スプレッドシート ◀─ 10分おきに読み取り ─ Workers
+自前のアンケート(/survey) ─▶ Workers ─▶ D1(回答・写真・SNSリンク)
+※ 移行のあいだだけ、旧Googleフォームの回答を10分おきに取り込んでいます(SHEET_SYNC)
 ```
 
 ブラウザからデータベースは直接見られません。必ず `/api/*` を通ります。

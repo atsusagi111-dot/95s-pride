@@ -4,6 +4,13 @@
 export const CHOICE_ACCEPT = 'プロフィール回答特典（なんでもお悩み相談15分～30分）を受け取る';
 export const CHOICE_DECLINE = '受け取らない';
 
+// メンバーページ(プロフィールの閲覧)。お礼メールの本文に載せる
+export const MEMBERS_PAGE_URL = 'https://95s-pride.inquiry-router.workers.dev/members';
+const MEMBERS_NOTICE = [
+  '自分を含む他メンバーのプロフィール回答は、以下のリンクで閲覧できます。',
+  MEMBERS_PAGE_URL,
+];
+
 function senderName(env) {
   return env.MAIL_SENDER_NAME || '95s PRIDE';
 }
@@ -100,6 +107,8 @@ export function buildThanksMail(env, choice, name) {
         '',
         'ご連絡をお待ちしています。',
         '',
+        ...MEMBERS_NOTICE,
+        '',
         sender,
       ].join('\n'),
     };
@@ -113,6 +122,8 @@ export function buildThanksMail(env, choice, name) {
         '',
         'プロフィール回答ありがとうございました！',
         '今後ともよろしくお願いします。',
+        '',
+        ...MEMBERS_NOTICE,
         '',
         sender,
       ].join('\n'),
