@@ -11,8 +11,9 @@ function makeSlug() {
 
 // 写真の取り込みを、1回の実行でいくつまで行うか(実行時間を使いすぎないため。残りは次の実行で行う)
 const MAX_PHOTOS_PER_RUN = 3;
-// 写真の取り込みに失敗したとき、あきらめるまでの回数
-const MAX_PHOTO_ATTEMPTS = 5;
+// 写真の取り込みに失敗したとき、あきらめるまでの回数(10分おきに試すので、30回は約5時間)
+// フォルダの共有が間に合わなかったときなど、あとで読めるようになる場合が多いため、長めに粘る
+const MAX_PHOTO_ATTEMPTS = 30;
 
 // 新しい設問があれば「非公開」で登録する(勝手に公開しない)。写真の設問は、プロフィールの項目にしない
 async function upsertQuestions(db, questions) {
@@ -69,13 +70,13 @@ async function sendThanks(env, response, responseKey) {
 }
 
 // アンケートでアップロードされた写真を、ドライブから読み、正方形に縮めて保存する
-// 失敗しても回答の取り込みは止めない。次の実行でやり直し、5回失敗したらあきらめる(写真が無い扱い)
+// 失敗しても回答の取り込みは止めない。次の実行でやり直し、30回失敗したらあきらめる(写真が無い扱い)。失敗した回数が少ない写真から順に試す(読めない写真が、ほかの写真を止めないため)
 async function syncPendingPhotos(env, tools) {
   const { results } = await env.DB.prepare(`
     SELECT fi.response_key, fi.photo_file_id, fi.photo_attempts, p.member_id
     FROM form_imports fi JOIN profiles p ON p.id = fi.profile_id
     WHERE fi.photo_state = 'pending' AND p.member_id IS NOT NULL
-    ORDER BY fi.imported_at, fi.response_key LIMIT ?`).bind(MAX_PHOTOS_PER_RUN).all();
+    ORDER BY fi.photo_attempts, fi.imported_at, fi.response_key LIMIT ?`).bind(MAX_PHOTOS_PER_RUN).all();
   let saved = 0;
   for (const row of results) {
     try {

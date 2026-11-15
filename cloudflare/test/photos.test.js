@@ -83,7 +83,7 @@ describe('アンケートの写真の取り込み', () => {
     expect((await (await get('/api/public-profiles')).json()).profiles[0].photo).toBeNull();
   });
 
-  it('読み込みに失敗しても回答は取り込まれ、次の実行でやり直し、5回失敗するとあきらめる', async () => {
+  it('読み込みに失敗しても回答は取り込まれ、次の実行でやり直し、30回失敗するとあきらめる', async () => {
     const rows = async () => [HEADERS, row('10/5/2026 22:31:33', 'a@example.com', PHOTO_URL)];
     const bad = makeTools({ fail: true });
     expect((await syncResponses(env, rows, bad.tools)).imported).toBe(1);
@@ -96,13 +96,13 @@ describe('アンケートの写真の取り込み', () => {
     expect((await env.DB.prepare('SELECT photo_state FROM form_imports').first()).photo_state).toBe('done');
     expect((await env.DB.prepare('SELECT count(*) AS n FROM member_photos').first()).n).toBe(1);
 
-    // 失敗が続く別の回答は、5回であきらめる
+    // 失敗が続く別の回答は、30回であきらめる
     await env.DB.prepare('DELETE FROM member_photos').run();
     const second = async () => [HEADERS, row('10/6/2026 10:00:00', 'b@example.com', PHOTO_URL)];
-    for (let i = 0; i < 5; i += 1) await syncResponses(env, second, bad.tools);
+    for (let i = 0; i < 30; i += 1) await syncResponses(env, second, bad.tools);
     imp = await env.DB.prepare("SELECT photo_state, photo_attempts FROM form_imports WHERE response_key LIKE '%b@example.com'").first();
-    expect(imp).toEqual({ photo_state: 'failed', photo_attempts: 5 });
-    expect(bad.calls.fetched.length).toBe(6);
+    expect(imp).toEqual({ photo_state: 'failed', photo_attempts: 30 });
+    expect(bad.calls.fetched.length).toBe(31);
   });
 
   it('縮めた結果が JPEG でなければ、保存しない', async () => {
@@ -125,6 +125,18 @@ describe('アンケートの写真の取り込み', () => {
     const current = await env.DB.prepare('SELECT slug FROM profiles WHERE is_current = 1').first();
     await env.DB.prepare("UPDATE profiles SET visibility = 'public' WHERE is_current = 1").run();
     expect((await (await get('/api/public-profiles')).json()).profiles[0].photo).toContain(`/api/photo/${current.slug}`);
+  });
+
+  it('読めない写真が、ほかの写真を止めない(失敗の少ない順に試す)', async () => {
+    const bad = makeTools({ fail: true });
+    const stuck = async () => [HEADERS, ...['a', 'b', 'c'].map((n, i) => row(`10/${i + 1}/2026 10:00:00`, `${n}@example.com`, PHOTO_URL))];
+    await syncResponses(env, stuck, bad.tools); // 3件とも失敗(各1回)
+    // あとから新しい回答が来て、今度は読める
+    const good = makeTools();
+    const more = async () => [HEADERS, ...['a', 'b', 'c', 'z'].map((n, i) => row(`10/${i + 1}/2026 10:00:00`, `${n}@example.com`, PHOTO_URL))];
+    await syncResponses(env, more, good.tools);
+    const z = await env.DB.prepare("SELECT photo_state FROM form_imports WHERE response_key LIKE '%z@example.com'").first();
+    expect(z.photo_state).toBe('done');
   });
 
   it('一度に取り込む写真は3件まで。残りは次の実行で取り込む', async () => {
