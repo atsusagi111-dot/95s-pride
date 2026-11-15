@@ -1,15 +1,15 @@
 {
-  "cleanUrls": true,
-  "redirects": [
+  "buildCommand": "mkdir -p dist && cp cloudflare/cutover/old-site-notice.html dist/index.html",
+  "outputDirectory": "dist",
+  "installCommand": "echo skip",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "headers": [
     {
-      "source": "/",
-      "destination": "https://95s-pride.inquiry-router.workers.dev/",
-      "permanent": false
-    },
-    {
-      "source": "/:path*",
-      "destination": "https://95s-pride.inquiry-router.workers.dev/:path*",
-      "permanent": false
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex" },
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
     }
   ]
 }

@@ -1,7 +1,4 @@
-# 公開しないもの(サイトに必要なのは HTML / css / js / assets / api / vercel.json だけ)
-.env*
-.claude/
-gas/
-tools/
-アーキテクチャ/
-README.md
+# 旧サイトは「新サイトはこちら」の案内ページだけを出す。旧APIは公開しない
+api
+gas
+tools
