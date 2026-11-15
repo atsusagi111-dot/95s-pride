@@ -2,8 +2,12 @@
 
 1995年生まれのコミュニティ「95s PRIDE」の公式サイトと、会員制メンバーページです。
 
-- 公式サイト: https://95s-pride.vercel.app
-- メンバー紹介: https://95s-pride.vercel.app/members
+- 公式サイト: https://95s-pride.inquiry-router.workers.dev
+- メンバー紹介: https://95s-pride.inquiry-router.workers.dev/members
+
+> 2026年11月に、Vercel + Google Apps Script 構成から Cloudflare Workers + D1 へ移行しました。
+> 新しい構成の説明は [cloudflare/README.md](cloudflare/README.md)、切り替えの記録は [cloudflare/cutover/CUTOVER.md](cloudflare/cutover/CUTOVER.md) にあります。
+> このページ以下の説明(Vercel・GAS)は、旧構成のものです。旧URL(95s-pride.vercel.app)は新URLへ転送されています。
 - プロフィールアンケート(会員登録を兼ねる): [Googleフォーム](https://docs.google.com/forms/d/e/1FAIpQLSfeHKnrNRJpZ7EFMmod2a2JNQmQKbJfdzNyyz22lW2AiuGj9w/viewform)
 
 ## しくみ
