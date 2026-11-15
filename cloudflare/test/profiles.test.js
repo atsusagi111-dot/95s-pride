@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { env } from 'cloudflare:test';
+import { env, SELF } from 'cloudflare:test';
 import { get, loginAs, post, seedMember } from './helpers.js';
 
 describe('公開プロフィール', () => {
@@ -72,7 +72,7 @@ describe('管理API', () => {
     const overview = await (await get('/api/admin/overview', cookie)).json();
     expect(overview.profiles.length).toBe(2);
     expect(overview.me).toEqual({ email: 'admin@example.com', role: 'owner' });
-    expect(overview.admins).toEqual([{ email: 'admin@example.com', role: 'owner' }]);
+    expect(overview.admins).toEqual([{ email: 'admin@example.com', role: 'owner', invited_by: null }]);
 
     expect((await post(`/api/admin/profiles/${profileId}`, { visibility: 'public' }, cookie)).status).toBe(200);
     const { profiles } = await (await get('/api/public-profiles')).json();
@@ -89,19 +89,76 @@ describe('管理API', () => {
     expect((await post('/api/auth/login', { email: 'a@example.com', password: 'password123' })).status).toBe(401);
   });
 
-  it('編集者は停止・再開と設問の公開設定ができない', async () => {
+  it('管理者(招待された人)は、招待と解除以外のすべての操作ができる', async () => {
     const { memberId } = await seedMember({ email: 'a@example.com', password: 'password123', slug: 'target01' });
-    const { profileId } = await seedMember({ email: 'editor@example.com', password: 'password123', slug: 'editor01', admin: true, role: 'editor' });
-    const cookie = await loginAs('editor@example.com', 'password123');
+    const { profileId } = await seedMember({ email: 'mgr@example.com', password: 'password123', slug: 'mgr0001', admin: true, role: 'manager' });
+    const cookie = await loginAs('mgr@example.com', 'password123');
 
-    expect((await post(`/api/admin/members/${memberId}`, { status: 'suspended' }, cookie)).status).toBe(403);
-    expect((await post('/api/admin/questions/q4', { is_public: false }, cookie)).status).toBe(403);
-    // 公開範囲・メモ・紹介カードはできる
-    expect((await post(`/api/admin/profiles/${profileId}`, { visibility: 'hidden' }, cookie)).status).toBe(200);
-    expect((await post(`/api/admin/members/${memberId}`, { note: '連絡済み' }, cookie)).status).toBe(200);
+    expect((await post(`/api/admin/members/${memberId}`, { status: 'suspended' }, cookie)).status).toBe(200);
+    expect((await post(`/api/admin/members/${memberId}`, { status: 'active' }, cookie)).status).toBe(200);
+    expect((await post('/api/admin/questions/q4', { is_public: false }, cookie)).status).toBe(200);
+    expect((await post(`/api/admin/profiles/${profileId}`, { visibility: 'public' }, cookie)).status).toBe(200);
     expect((await post('/api/admin/cards', { name: '花子' }, cookie)).status).toBe(200);
     const overview = await (await get('/api/admin/overview', cookie)).json();
-    expect(overview.me.role).toBe('editor');
+    expect(overview.me.role).toBe('manager');
+
+    // 招待・解除はオーナーだけ
+    expect((await post('/api/admin/admins', { email: 'new@example.com' }, cookie)).status).toBe(403);
+    expect((await SELF.fetch('https://example.com/api/admin/admins/a%40example.com', { method: 'DELETE', headers: { Cookie: cookie } })).status).toBe(403);
+  });
+
+  it('オーナーが招待すると、その人は会員として登録され、管理者になる', async () => {
+    await seedMember({ email: 'owner@example.com', password: 'password123', slug: 'owner01', admin: true, role: 'owner' });
+    const cookie = await loginAs('owner@example.com', 'password123');
+
+    const res = await post('/api/admin/admins', { email: 'New@Example.com ' }, cookie);
+    expect(res.status).toBe(200);
+    expect((await res.json()).mailed).toBe(true);
+
+    const admin = await env.DB.prepare('SELECT role, invited_by FROM admins WHERE email = ?').bind('new@example.com').first();
+    expect(admin).toEqual({ role: 'manager', invited_by: 'owner@example.com' });
+    const member = await env.DB.prepare('SELECT status, password_hash FROM members WHERE email = ?').bind('new@example.com').first();
+    expect(member).toEqual({ status: 'active', password_hash: null });
+
+    // 招待された人は、確認コードでパスワードを決められる
+    expect((await post('/api/auth/password-reset', { email: 'new@example.com' })).status).toBe(200);
+
+    // 二重の招待、形式の違うアドレスは受け付けない
+    expect((await (await post('/api/admin/admins', { email: 'new@example.com' }, cookie)).json()).error).toBe('already_admin');
+    expect((await post('/api/admin/admins', { email: 'not-an-email' }, cookie)).status).toBe(400);
+
+    const { log } = await (await get('/api/admin/overview', cookie)).json();
+    expect(log.some((l) => l.action === 'admin.invite' && l.target === 'new@example.com')).toBe(true);
+  });
+
+  it('オーナーは管理者を外せるが、オーナーと自分自身は外せない', async () => {
+    await seedMember({ email: 'owner@example.com', password: 'password123', slug: 'owner01', admin: true, role: 'owner' });
+    await seedMember({ email: 'owner2@example.com', password: 'password123', slug: 'owner02', admin: true, role: 'owner' });
+    await seedMember({ email: 'mgr@example.com', password: 'password123', slug: 'mgr0001', admin: true, role: 'manager' });
+    const cookie = await loginAs('owner@example.com', 'password123');
+    const remove = (email) => SELF.fetch(`https://example.com/api/admin/admins/${encodeURIComponent(email)}`, { method: 'DELETE', headers: { Cookie: cookie } });
+
+    expect((await remove('owner2@example.com')).status).toBe(400);
+    expect((await remove('owner@example.com')).status).toBe(400);
+    expect((await remove('mgr@example.com')).status).toBe(200);
+    expect((await remove('mgr@example.com')).status).toBe(404);
+    // 外された人は、管理画面を使えない
+    const mgrCookie = await loginAs('mgr@example.com', 'password123');
+    expect((await get('/api/admin/overview', mgrCookie)).status).toBe(403);
+  });
+
+  it('公式アドレスは、登録されていても招待されても、管理の操作ができない', async () => {
+    await seedMember({ email: 'owner@example.com', password: 'password123', slug: 'owner01', admin: true, role: 'owner' });
+    const ownerCookie = await loginAs('owner@example.com', 'password123');
+    const blocked = await post('/api/admin/admins', { email: '95spride.official@gmail.com' }, ownerCookie);
+    expect(blocked.status).toBe(400);
+    expect((await blocked.json()).error).toBe('blocked_email');
+
+    // 万一、データベースに直接登録されていても、操作できない
+    await seedMember({ email: '95spride.official@gmail.com', password: 'password123', slug: 'official1', admin: true, role: 'owner' });
+    const cookie = await loginAs('95spride.official@gmail.com', 'password123');
+    expect((await get('/api/admin/overview', cookie)).status).toBe(403);
+    expect((await post('/api/admin/cards', { name: '偽物' }, cookie)).status).toBe(403);
   });
 
   it('別のサイトから送られた操作は拒否する', async () => {

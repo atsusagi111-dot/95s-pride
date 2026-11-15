@@ -94,7 +94,7 @@
       </table>
 
       <h2>設問の公開設定</h2>
-      <p class="sub">チェックを入れた設問だけが、公開プロフィールと会員限定プロフィールに表示されます。メールアドレスは常に非公開です。<span id="ownerNote1"></span></p>
+      <p class="sub">チェックを入れた設問だけが、公開プロフィールと会員限定プロフィールに表示されます。メールアドレスは常に非公開です。</p>
       <div id="questions" class="cards"></div>
 
       <h2>紹介カード(ログイン後のメンバー一覧)</h2>
@@ -103,11 +103,17 @@
       <div class="bar"><button id="addCard" class="primary">カードを追加</button></div>
 
       <h2>この画面を使える人</h2>
-      <p class="sub">オーナーは、すべての操作ができます。編集者は、ログインの停止・再開と、設問の公開設定ができません。人の追加・削除は、サイト担当者だけができます。</p>
+      <p class="sub">オーナーは、すべての操作に加えて、運営メンバーの招待と解除ができます。管理者(オーナーに招待された人)は、招待と解除以外のすべての操作ができます。</p>
       <table>
-        <thead><tr><th>メール</th><th>権限</th></tr></thead>
+        <thead><tr><th>メール</th><th>権限</th><th>招待した人</th><th></th></tr></thead>
         <tbody id="admins"></tbody>
       </table>
+      <div id="inviteBox" class="card" hidden>
+        <label for="inviteEmail">運営メンバーに招待する人のメールアドレス</label>
+        <input type="email" id="inviteEmail" placeholder="例: sample@gmail.com" autocomplete="off">
+        <p class="note">招待すると、その人に案内のメールが届きます。その人は、メンバーページで「はじめての方」からパスワードを決めると、この画面を使えます。</p>
+        <div class="row"><button id="inviteButton" class="primary">招待する</button></div>
+      </div>
 
       <h2>操作の記録(新しい順に30件)</h2>
       <p class="sub">いつ、だれが、何をしたかを記録しています。</p>

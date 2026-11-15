@@ -53,6 +53,30 @@ export function buildCodeMail(env, code, ttlMinutes) {
   };
 }
 
+// 運営メンバーへの招待メール
+export function buildAdminInviteMail(env, siteUrl) {
+  return {
+    subject: '【95s PRIDE】運営メンバーに招待されました',
+    text: [
+      '95s PRIDE の運営メンバーに招待されました。',
+      'メンバーページの運営管理画面で、公開する人の切り替えや、ログインの管理ができます。',
+      '',
+      '■ パスワードをまだ決めていない方',
+      `1. ${siteUrl}/members を開く`,
+      '2. 「はじめての方・パスワードを忘れた方」を押し、このメールアドレスを入力する',
+      '3. メールに届く確認コードと、新しいパスワード(8文字以上)を入力する',
+      `4. ログインしたまま、${siteUrl}/admin を開く`,
+      '',
+      '■ すでにパスワードを決めている方',
+      `${siteUrl}/members でログインしてから、${siteUrl}/admin を開いてください。`,
+      '',
+      'このメールに心当たりがない場合は、何もせず破棄してください。',
+      '',
+      senderName(env),
+    ].join('\n'),
+  };
+}
+
 // アンケート回答後のお礼メール(Q19 の選択で文面を変える)。対象外なら null
 export function buildThanksMail(env, choice, name) {
   const greeting = name ? `${name}さん` : 'こんにちは';

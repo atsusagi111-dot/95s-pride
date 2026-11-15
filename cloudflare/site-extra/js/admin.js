@@ -13,7 +13,7 @@
   var meLabel = document.getElementById('me');
 
   var VISIBILITY_LABELS = { public: '公開', members: '会員限定', hidden: '非表示' };
-  var ROLE_LABELS = { owner: 'オーナー', editor: '編集者' };
+  var ROLE_LABELS = { owner: 'オーナー', manager: '管理者' };
   var ACTION_LABELS = {
     'profile.update': 'プロフィールを変更',
     'member.suspend': 'ログインを停止',
@@ -23,6 +23,8 @@
     'card.create': '紹介カードを追加',
     'card.update': '紹介カードを更新',
     'card.delete': '紹介カードを削除',
+    'admin.invite': '運営メンバーを招待',
+    'admin.remove': '運営メンバーを解除',
     'sync': '回答を取り込み'
   };
   var isOwner = false;
@@ -42,6 +44,11 @@
 
   var ERROR_TEXT = {
     owner_only: 'この操作はオーナーだけができます',
+    invalid_email: 'メールアドレスの形式を確認してください',
+    blocked_email: 'このメールアドレスは、運営として登録できません',
+    already_admin: 'すでに運営メンバーです',
+    member_suspended: 'この人はログインが停止されています。先に再開してください',
+    cannot_remove_owner: 'オーナーは、この画面から外せません',
     cannot_suspend_admin: '運営の人は、この画面から停止できません',
     cross_site: '別のサイトからの操作は受け付けません',
     invalid_photo: '写真は assets/members/ のファイル名で入力してください',
@@ -113,9 +120,6 @@
     if (p.is_admin) {
       toggle.disabled = true;
       toggle.title = '運営の人は、この画面から停止できません';
-    } else if (!isOwner) {
-      toggle.disabled = true;
-      toggle.title = 'オーナーだけができます';
     }
     toggle.addEventListener('click', function () {
       var next = suspended ? 'active' : 'suspended';
@@ -190,7 +194,6 @@
       var check = el('input');
       check.type = 'checkbox';
       check.checked = Boolean(q.is_public);
-      check.disabled = !isOwner;
       check.addEventListener('change', function () {
         save('/api/admin/questions/' + q.key, { is_public: check.checked }, '「' + q.label + '」を' + (check.checked ? '公開' : '非公開') + 'にしました');
       });
@@ -200,7 +203,6 @@
       card.appendChild(line);
       questionsBox.appendChild(card);
     });
-    document.getElementById('ownerNote1').textContent = isOwner ? '' : '(この設定は、オーナーだけが変えられます)';
   }
 
   /* ---------- 紹介カード ---------- */
@@ -262,8 +264,23 @@
       var tr = el('tr');
       tr.appendChild(el('td', 'email', a.email + (a.email === me.email ? '(あなた)' : '')));
       tr.appendChild(el('td', '', ROLE_LABELS[a.role] || a.role));
+      tr.appendChild(el('td', 'email', a.invited_by || ''));
+      var action = el('td');
+      if (isOwner && a.role !== 'owner') {
+        var remove = el('button', 'danger', '外す');
+        remove.addEventListener('click', function () {
+          if (!window.confirm(a.email + ' を運営メンバーから外しますか?\n(この画面は使えなくなります。メンバーとしてのログインは、そのままです)')) return;
+          request('/api/admin/admins/' + encodeURIComponent(a.email), 'DELETE').then(function (result) {
+            showMessage(result.ok ? '運営メンバーから外しました' : '外せませんでした: ' + (ERROR_TEXT[result.data.error] || result.data.error), result.ok);
+            load();
+          });
+        });
+        action.appendChild(remove);
+      }
+      tr.appendChild(action);
       adminsBody.appendChild(tr);
     });
+    document.getElementById('inviteBox').hidden = !isOwner;
   }
 
   function renderLog(log) {
@@ -324,6 +341,25 @@
       }
       var d = result.data;
       showMessage('取り込み完了: 新規 ' + d.imported + ' 件、お礼メール ' + d.mailed + ' 件', true);
+      load();
+    });
+  });
+
+  document.getElementById('inviteButton').addEventListener('click', function () {
+    var input = document.getElementById('inviteEmail');
+    var email = input.value.trim();
+    if (!email) return;
+    if (!window.confirm(email + ' を運営メンバー(管理者)に招待しますか?\n案内のメールが届き、この画面を使えるようになります。')) return;
+    var button = this;
+    button.disabled = true;
+    request('/api/admin/admins', 'POST', { email: email }).then(function (result) {
+      button.disabled = false;
+      if (!result.ok) {
+        showMessage('招待できませんでした: ' + (ERROR_TEXT[result.data.error] || result.data.error || result.status));
+        return;
+      }
+      input.value = '';
+      showMessage(result.data.mailed ? email + ' を招待しました。案内のメールを送りました' : email + ' を招待しましたが、案内のメールを送れませんでした。本人に直接お伝えください', result.data.mailed);
       load();
     });
   });

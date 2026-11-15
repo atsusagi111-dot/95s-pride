@@ -1,6 +1,9 @@
 // 運営向けの管理API(admins に登録されたメールアドレスでログインしている人だけ)
-// 権限は2段階: owner(全操作)/ editor(停止と設問の公開設定はできない)
-import { getAdmin, logAdminAction } from '../lib/db.js';
+// 権限は2段階: owner(全操作 + 運営の招待・解除)/ manager(オーナーに招待された人。招待・解除以外のすべての操作)
+import { normalizeEmail } from '../lib/credentials.js';
+import { getAdmin, getMember, logAdminAction } from '../lib/db.js';
+import { isBlockedAdmin } from '../lib/admin-policy.js';
+import { buildAdminInviteMail, sendMail } from '../lib/mail.js';
 import { syncResponses } from '../lib/sync.js';
 import { currentMember, json } from './http.js';
 
@@ -13,7 +16,8 @@ async function requireAdmin(request, env) {
   const member = await currentMember(request, env);
   if (!member) return { denied: json({ error: 'unauthorized' }, 401) };
   const admin = await getAdmin(env.DB, member.email);
-  if (!admin) return { denied: json({ error: 'forbidden' }, 403) };
+  // 公式アドレスなど、管理の操作から外しているアドレスは、登録されていても使えない
+  if (!admin || isBlockedAdmin(admin.email)) return { denied: json({ error: 'forbidden' }, 403) };
   return { admin };
 }
 
@@ -35,7 +39,7 @@ async function overview(env, admin) {
     ORDER BY p.is_current DESC, p.sort_order, p.id`).all();
   const { results: cards } = await env.DB.prepare('SELECT id, name, title, bio, image_url, instagram_url, sort_order FROM member_cards ORDER BY sort_order, id').all();
   const { results: questions } = await env.DB.prepare('SELECT key, label, is_public FROM questions ORDER BY sort_order').all();
-  const { results: admins } = await env.DB.prepare('SELECT email, role FROM admins ORDER BY created_at, email').all();
+  const { results: admins } = await env.DB.prepare("SELECT email, role, invited_by FROM admins ORDER BY CASE role WHEN 'owner' THEN 0 ELSE 1 END, created_at, email").all();
   const { results: log } = await env.DB.prepare('SELECT at, admin_email, action, target, detail FROM admin_log ORDER BY id DESC LIMIT 30').all();
   return json({ me: { email: admin.email, role: admin.role }, admins, profiles, cards, questions, log });
 }
@@ -72,7 +76,7 @@ async function updateProfile(env, admin, id, body) {
   return json({ ok: true });
 }
 
-// 会員の停止・再開(オーナーのみ)とメモ(編集者もできる)
+// 会員の停止・再開とメモ
 async function updateMember(env, admin, id, body) {
   const member = await env.DB.prepare('SELECT email, status FROM members WHERE id = ?').bind(id).first();
   if (!member) return json({ error: 'not_found' }, 404);
@@ -81,7 +85,6 @@ async function updateMember(env, admin, id, body) {
   const details = [];
   let action = 'member.note';
   if (body.status !== undefined) {
-    if (admin.role !== 'owner') return ownerOnly();
     if (!STATUSES.includes(body.status)) return json({ error: 'invalid_status' }, 400);
     // 運営の人を画面から止めて、自分たちを締め出さないようにする
     if (body.status === 'suspended' && (await getAdmin(env.DB, member.email))) return json({ error: 'cannot_suspend_admin' }, 400);
@@ -100,9 +103,8 @@ async function updateMember(env, admin, id, body) {
   return json({ ok: true });
 }
 
-// 設問の公開・非公開(オーナーのみ)
+// 設問の公開・非公開
 async function updateQuestion(env, admin, key, body) {
-  if (admin.role !== 'owner') return ownerOnly();
   const question = await env.DB.prepare('SELECT label FROM questions WHERE key = ?').bind(key).first();
   if (!question) return json({ error: 'not_found' }, 404);
   await env.DB.prepare('UPDATE questions SET is_public = ? WHERE key = ?').bind(body.is_public ? 1 : 0, key).run();
@@ -138,6 +140,42 @@ async function deleteCard(env, admin, id) {
   return json({ ok: true });
 }
 
+// 運営メンバーの招待(オーナーのみ)。招待された人は、パスワードを決めてログインすれば、管理画面を使える
+async function inviteAdmin(request, env, admin, body) {
+  if (admin.role !== 'owner') return ownerOnly();
+  const email = normalizeEmail(body.email);
+  if (!email) return json({ error: 'invalid_email' }, 400);
+  if (isBlockedAdmin(email)) return json({ error: 'blocked_email' }, 400);
+  if (await getAdmin(env.DB, email)) return json({ error: 'already_admin' }, 400);
+  const existing = await getMember(env.DB, email);
+  if (existing && existing.status !== 'active') return json({ error: 'member_suspended' }, 400);
+
+  // ログインできるよう、会員としても登録する(パスワードは本人が、メールの確認コードで決める)
+  await env.DB.prepare('INSERT OR IGNORE INTO members (email) VALUES (?)').bind(email).run();
+  await env.DB.prepare('INSERT INTO admins (email, role, invited_by) VALUES (?, ?, ?)').bind(email, 'manager', admin.email).run();
+  await logAdminAction(env.DB, admin.email, 'admin.invite', email, '管理者として招待');
+
+  let mailed = true;
+  try {
+    await sendMail(env, { to: email, ...buildAdminInviteMail(env, new URL(request.url).origin) });
+  } catch (error) {
+    console.error('招待メールの送信に失敗しました:', error);
+    mailed = false;
+  }
+  return json({ ok: true, mailed });
+}
+
+// 運営メンバーの解除(オーナーのみ。オーナー本人と、自分自身は解除できない)
+async function removeAdmin(env, admin, email) {
+  if (admin.role !== 'owner') return ownerOnly();
+  const target = await getAdmin(env.DB, email);
+  if (!target) return json({ error: 'not_found' }, 404);
+  if (target.role === 'owner' || target.email === admin.email) return json({ error: 'cannot_remove_owner' }, 400);
+  await env.DB.prepare('DELETE FROM admins WHERE email = ?').bind(email).run();
+  await logAdminAction(env.DB, admin.email, 'admin.remove', email, '管理者から外した');
+  return json({ ok: true });
+}
+
 // 管理APIの振り分け。path は /api/admin/ より後ろ
 export async function handleAdmin(request, env, path, body) {
   const { method } = request;
@@ -158,5 +196,7 @@ export async function handleAdmin(request, env, path, body) {
   if (method === 'POST' && path === 'cards') return saveCard(env, admin, null, body);
   if (method === 'POST' && (m = path.match(/^cards\/(\d+)$/))) return saveCard(env, admin, Number(m[1]), body);
   if (method === 'DELETE' && (m = path.match(/^cards\/(\d+)$/))) return deleteCard(env, admin, Number(m[1]));
+  if (method === 'POST' && path === 'admins') return inviteAdmin(request, env, admin, body);
+  if (method === 'DELETE' && (m = path.match(/^admins\/(.+)$/))) return removeAdmin(env, admin, decodeURIComponent(m[1]).toLowerCase());
   return json({ error: 'not_found' }, 404);
 }
