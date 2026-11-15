@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { env, SELF } from 'cloudflare:test';
 import { get, loginAs, seedMember } from './helpers.js';
-import { extractDriveFileId, parseQuestions, parseResponseRow } from '../src/lib/sheet-rows.js';
 import { saveMemberPhoto } from '../src/lib/photos.js';
-import { syncResponses } from '../src/lib/sync.js';
 
 // 本物の写真の代わりに、JPEG の先頭の印(FF D8 FF)から始まる小さなデータを使う
 function fakeJpeg(size = 2000) {
@@ -11,146 +9,6 @@ function fakeJpeg(size = 2000) {
   bytes.set([0xff, 0xd8, 0xff, 0xe0]);
   return bytes;
 }
-
-const HEADERS = ['Timestamp', 'Q1 オプチャの表示名', 'Q2 名前 (呼ばれたいニックネーム)', 'Q3 生年月日', 'Email Address', 'Q19 プロフィール回答特典について', 'Q20 プロフィール写真(任意)'];
-const PHOTO_URL = 'https://drive.google.com/open?id=1AbCdEfGhIjKlMnOpQrStUvWxYz';
-const row = (time, email, photo = '') => [time, '表示名', '太郎', '9/6/1995', email, '', photo];
-
-// 写真の取り込みの道具を、テスト用に差し替える(本物のドライブと画像変換は使わない)
-function makeTools({ fail = false, notJpeg = false } = {}) {
-  const calls = { fetched: [] };
-  return {
-    calls,
-    tools: {
-      fetchFile: async (envArg, fileId) => {
-        calls.fetched.push(fileId);
-        if (fail) throw new Error('ドライブから読めません');
-        return new Uint8Array([1, 2, 3]);
-      },
-      resize: async () => (notJpeg ? new Uint8Array([9, 9, 9, 9]) : fakeJpeg(1000)),
-    },
-  };
-}
-
-describe('アンケートの写真の項目の読み取り', () => {
-  it('ドライブのURLから、ファイルIDを取り出す', () => {
-    expect(extractDriveFileId(PHOTO_URL)).toBe('1AbCdEfGhIjKlMnOpQrStUvWxYz');
-    expect(extractDriveFileId('https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/view')).toBe('1AbCdEfGhIjKlMnOpQrStUvWxYz');
-    // 複数のとき(カンマ区切り)は、最初の1つ
-    expect(extractDriveFileId(`${PHOTO_URL}, https://drive.google.com/open?id=ZZZZZZZZZZZZZZZZZZZZ`)).toBe('1AbCdEfGhIjKlMnOpQrStUvWxYz');
-    expect(extractDriveFileId('')).toBeNull();
-    expect(extractDriveFileId('写真はありません')).toBeNull();
-  });
-
-  it('写真の設問は、プロフィールの項目に入れず、ファイルIDだけを取り出す', () => {
-    const questions = parseQuestions(HEADERS);
-    expect(questions.find((q) => q.key === 'q20').isPhoto).toBe(true);
-    expect(questions.find((q) => q.key === 'q2').isPhoto).toBe(false);
-    const parsed = parseResponseRow(row('10/5/2026 22:31:33', 'a@example.com', PHOTO_URL), questions, 4);
-    expect(parsed.photoFileId).toBe('1AbCdEfGhIjKlMnOpQrStUvWxYz');
-    expect(parsed.answers.q20).toBeUndefined();
-    expect(parseResponseRow(row('10/5/2026 22:31:33', 'a@example.com'), questions, 4).photoFileId).toBeNull();
-  });
-});
-
-describe('アンケートの写真の取り込み', () => {
-  it('写真付きの回答を取り込むと、写真が保存され、プロフィールに使われる(URLは見えない)', async () => {
-    const { tools, calls } = makeTools();
-    const result = await syncResponses(env, async () => [HEADERS, row('10/5/2026 22:31:33', 'a@example.com', PHOTO_URL)], tools);
-    expect(result.imported).toBe(1);
-    expect(calls.fetched).toEqual(['1AbCdEfGhIjKlMnOpQrStUvWxYz']);
-
-    const photo = await env.DB.prepare('SELECT size FROM member_photos').first();
-    expect(photo.size).toBe(1000);
-    const imp = await env.DB.prepare('SELECT photo_state FROM form_imports').first();
-    expect(imp.photo_state).toBe('done');
-    // 写真の設問は、設問にも回答にも入らない(ドライブのURLが画面に出ない)
-    expect((await env.DB.prepare("SELECT count(*) AS n FROM questions WHERE key = 'q20'").first()).n).toBe(0);
-    expect((await env.DB.prepare("SELECT count(*) AS n FROM profile_answers WHERE question_key = 'q20'").first()).n).toBe(0);
-
-    await env.DB.prepare("UPDATE profiles SET visibility = 'public'").run();
-    const { profiles } = await (await get('/api/public-profiles')).json();
-    expect(profiles[0].photo).toMatch(/^\/api\/photo\/[A-Za-z0-9]+\?v=\d+$/);
-    expect(JSON.stringify(profiles)).not.toContain('drive.google.com');
-  });
-
-  it('写真がなければ、写真は保存されず、プロフィールの写真は空になる(画面が共通のアイコンを出す)', async () => {
-    const { tools, calls } = makeTools();
-    await syncResponses(env, async () => [HEADERS, row('10/5/2026 22:31:33', 'a@example.com')], tools);
-    expect(calls.fetched).toEqual([]);
-    expect((await env.DB.prepare('SELECT count(*) AS n FROM member_photos').first()).n).toBe(0);
-    await env.DB.prepare("UPDATE profiles SET visibility = 'public'").run();
-    expect((await (await get('/api/public-profiles')).json()).profiles[0].photo).toBeNull();
-  });
-
-  it('読み込みに失敗しても回答は取り込まれ、次の実行でやり直し、30回失敗するとあきらめる', async () => {
-    const rows = async () => [HEADERS, row('10/5/2026 22:31:33', 'a@example.com', PHOTO_URL)];
-    const bad = makeTools({ fail: true });
-    expect((await syncResponses(env, rows, bad.tools)).imported).toBe(1);
-    let imp = await env.DB.prepare('SELECT photo_state, photo_attempts FROM form_imports').first();
-    expect(imp).toEqual({ photo_state: 'pending', photo_attempts: 1 });
-
-    // 次の実行で、うまくいけば保存される
-    const good = makeTools();
-    await syncResponses(env, rows, good.tools);
-    expect((await env.DB.prepare('SELECT photo_state FROM form_imports').first()).photo_state).toBe('done');
-    expect((await env.DB.prepare('SELECT count(*) AS n FROM member_photos').first()).n).toBe(1);
-
-    // 失敗が続く別の回答は、30回であきらめる
-    await env.DB.prepare('DELETE FROM member_photos').run();
-    const second = async () => [HEADERS, row('10/6/2026 10:00:00', 'b@example.com', PHOTO_URL)];
-    for (let i = 0; i < 30; i += 1) await syncResponses(env, second, bad.tools);
-    imp = await env.DB.prepare("SELECT photo_state, photo_attempts FROM form_imports WHERE response_key LIKE '%b@example.com'").first();
-    expect(imp).toEqual({ photo_state: 'failed', photo_attempts: 30 });
-    expect(bad.calls.fetched.length).toBe(31);
-  });
-
-  it('縮めた結果が JPEG でなければ、保存しない', async () => {
-    const { tools } = makeTools({ notJpeg: true });
-    await syncResponses(env, async () => [HEADERS, row('10/5/2026 22:31:33', 'a@example.com', PHOTO_URL)], tools);
-    expect((await env.DB.prepare('SELECT count(*) AS n FROM member_photos').first()).n).toBe(0);
-  });
-
-  it('回答を送り直したとき、写真がなければ前の写真を引き継ぎ、写真があれば差し替える', async () => {
-    const { tools } = makeTools();
-    await syncResponses(env, async () => [HEADERS, row('10/5/2026 22:31:33', 'a@example.com', PHOTO_URL)], tools);
-    const first = await env.DB.prepare('SELECT updated_at, size FROM member_photos').first();
-
-    // 写真なしで送り直す → 前の写真が残る
-    await syncResponses(env, async () => [
-      HEADERS, row('10/5/2026 22:31:33', 'a@example.com', PHOTO_URL), row('10/6/2026 10:00:00', 'a@example.com'),
-    ], tools);
-    expect((await env.DB.prepare('SELECT count(*) AS n FROM member_photos').first()).n).toBe(1);
-    expect((await env.DB.prepare('SELECT size FROM member_photos').first()).size).toBe(first.size);
-    const current = await env.DB.prepare('SELECT slug FROM profiles WHERE is_current = 1').first();
-    await env.DB.prepare("UPDATE profiles SET visibility = 'public' WHERE is_current = 1").run();
-    expect((await (await get('/api/public-profiles')).json()).profiles[0].photo).toContain(`/api/photo/${current.slug}`);
-  });
-
-  it('読めない写真が、ほかの写真を止めない(失敗の少ない順に試す)', async () => {
-    const bad = makeTools({ fail: true });
-    const stuck = async () => [HEADERS, ...['a', 'b', 'c'].map((n, i) => row(`10/${i + 1}/2026 10:00:00`, `${n}@example.com`, PHOTO_URL))];
-    await syncResponses(env, stuck, bad.tools); // 3件とも失敗(各1回)
-    // あとから新しい回答が来て、今度は読める
-    const good = makeTools();
-    const more = async () => [HEADERS, ...['a', 'b', 'c', 'z'].map((n, i) => row(`10/${i + 1}/2026 10:00:00`, `${n}@example.com`, PHOTO_URL))];
-    await syncResponses(env, more, good.tools);
-    const z = await env.DB.prepare("SELECT photo_state FROM form_imports WHERE response_key LIKE '%z@example.com'").first();
-    expect(z.photo_state).toBe('done');
-  });
-
-  it('一度に取り込む写真は3件まで。残りは次の実行で取り込む', async () => {
-    const { tools } = makeTools();
-    const many = async () => [
-      HEADERS,
-      ...['a', 'b', 'c', 'd', 'e'].map((n, i) => row(`10/${i + 1}/2026 10:00:00`, `${n}@example.com`, PHOTO_URL)),
-    ];
-    await syncResponses(env, many, tools);
-    expect((await env.DB.prepare('SELECT count(*) AS n FROM member_photos').first()).n).toBe(3);
-    await syncResponses(env, many, tools);
-    expect((await env.DB.prepare('SELECT count(*) AS n FROM member_photos').first()).n).toBe(5);
-  });
-});
 
 describe('写真を見られる人', () => {
   async function withPhoto(email, visibility, slug) {
@@ -221,49 +79,5 @@ describe('運営による写真の削除', () => {
     const cookie = await loginAs('b@example.com', 'password123');
     const del = await SELF.fetch(`https://example.com/api/admin/photos/${memberId}`, { method: 'DELETE', headers: { Cookie: cookie } });
     expect(del.status).toBe(403);
-  });
-});
-
-describe('番号のない写真の設問', () => {
-  const UNNUMBERED = ['Timestamp', 'Q1 オプチャの表示名', 'Q2 名前 (呼ばれたいニックネーム)', 'プロフィール写真（任意）', 'Q3 生年月日', 'Email Address', 'Q19 プロフィール回答特典について'];
-
-  it('番号がなくても、写真の設問として読め、ほかの設問の番号と並び順は変わらない', () => {
-    const questions = parseQuestions(UNNUMBERED);
-    expect(questions.map((q) => q.key)).toEqual(['q1', 'q2', 'photo', 'q3', 'q19']);
-    expect(questions.find((q) => q.key === 'photo').isPhoto).toBe(true);
-    // 写真を除いた並び順(1, 2, 3, 4)になる
-    expect(questions.filter((q) => !q.isPhoto).map((q) => q.sortOrder)).toEqual([1, 2, 3, 4]);
-
-    const parsed = parseResponseRow(['10/5/2026 22:31:33', '表示名', '太郎', PHOTO_URL, '9/6/1995', 'a@example.com', ''], questions, 5);
-    expect(parsed.photoFileId).toBe('1AbCdEfGhIjKlMnOpQrStUvWxYz');
-    expect(parsed.answers.photo).toBeUndefined();
-    expect(parsed.answers.q3).toBe('9/6/1995');
-  });
-
-  it('写真の欄が空の回答、写真の列がまだ無いシートでも、そのまま取り込める', async () => {
-    const { tools, calls } = makeTools();
-    const old = ['Timestamp', 'Q1 オプチャの表示名', 'Q2 名前 (呼ばれたいニックネーム)', 'Q3 生年月日', 'Email Address', 'Q19 プロフィール回答特典について'];
-    await syncResponses(env, async () => [old, ['10/5/2026 22:31:33', '表示名', '太郎', '9/6/1995', 'a@example.com', '']], tools);
-    expect((await env.DB.prepare('SELECT count(*) AS n FROM profiles').first()).n).toBe(1);
-    // 写真の列が後から増えても、すでに取り込んだ回答は変わらない
-    const withPhoto = [...old, 'プロフィール写真（任意）'];
-    const result = await syncResponses(env, async () => [withPhoto, ['10/5/2026 22:31:33', '表示名', '太郎', '9/6/1995', 'a@example.com', '', '']], tools);
-    expect(result.imported).toBe(0);
-    expect(calls.fetched).toEqual([]);
-    expect((await env.DB.prepare('SELECT count(*) AS n FROM member_photos').first()).n).toBe(0);
-  });
-});
-
-describe('写真の列が複数あるシート(設問を作り直したときの古い列が残る)', () => {
-  it('ファイルが入っている列から写真を読み、古い空の列は無視する', () => {
-    const headers = ['Timestamp', 'Q2 名前 (呼ばれたいニックネーム)', 'Email Address', 'プロフィール写真（任意）', 'Q20 プロフィール写真（任意）'];
-    const questions = parseQuestions(headers);
-    expect(questions.filter((q) => q.isPhoto).length).toBe(2);
-    // 新しい列にファイルがある
-    expect(parseResponseRow(['10/5/2026 22:31:33', '太郎', 'a@example.com', PHOTO_URL, ''], questions, 2).photoFileId).toBe('1AbCdEfGhIjKlMnOpQrStUvWxYz');
-    // 古い列にだけある場合も読める
-    expect(parseResponseRow(['10/5/2026 22:31:33', '太郎', 'a@example.com', '', PHOTO_URL], questions, 2).photoFileId).toBe('1AbCdEfGhIjKlMnOpQrStUvWxYz');
-    // どちらも空
-    expect(parseResponseRow(['10/5/2026 22:31:33', '太郎', 'a@example.com', '', ''], questions, 2).photoFileId).toBeNull();
   });
 });

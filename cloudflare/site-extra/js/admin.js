@@ -344,22 +344,6 @@
 
   document.getElementById('reload').addEventListener('click', function () { showMessage(''); load(); });
   document.getElementById('addCard').addEventListener('click', function () { cardsBox.appendChild(renderCard({})); });
-  document.getElementById('sync').addEventListener('click', function () {
-    var button = this;
-    button.disabled = true;
-    showMessage('取り込み中です');
-    request('/api/admin/sync', 'POST', {}).then(function (result) {
-      button.disabled = false;
-      if (!result.ok) {
-        showMessage('取り込みに失敗しました(' + (result.data.error || result.status) + ')');
-        return;
-      }
-      var d = result.data;
-      showMessage('取り込み完了: 新規 ' + d.imported + ' 件、お礼メール ' + d.mailed + ' 件', true);
-      load();
-    });
-  });
-
   document.getElementById('inviteButton').addEventListener('click', function () {
     var input = document.getElementById('inviteEmail');
     var email = input.value.trim();

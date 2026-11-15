@@ -19,7 +19,6 @@
                                 └─▶ Gmail(確認コード・お礼メール)
 
 自前のアンケート(/survey) ─▶ Workers ─▶ D1(回答・写真・SNSリンク)
-※ 移行のあいだだけ、旧Googleフォームの回答を10分おきに取り込んでいます(SHEET_SYNC)
 ```
 
 ブラウザからデータベースは直接見られません。必ず `/api/*` を通ります。
@@ -62,7 +61,6 @@
 |---|---|
 | `SESSION_SECRET` | ログイン状態(Cookie)の署名用 |
 | `GMAIL_USER` / `GMAIL_APP_PASSWORD` | メール送信に使う Gmail と、そのアプリパスワード |
-| `GOOGLE_SERVICE_ACCOUNT` | 回答シートを読むサービスアカウントの JSON 鍵 |
 
 秘密でない設定は `cloudflare/wrangler.jsonc` にあります。ローカル開発の秘密は `cloudflare/.dev.vars`(ひな形は `.dev.vars.example`)。
 GitHub の Secrets には `CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` を入れています。

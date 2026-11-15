@@ -1,7 +1,7 @@
 // アンケートの回答を検証して保存する(Googleフォームの置き換え)
 import { randomBytes } from 'node:crypto';
 import { MAX_PHOTO_BYTES, MAX_SOURCE_BYTES, isJpeg, resizeToJpeg, saveMemberPhoto } from './photos.js';
-import { toIso } from './sheet-rows.js';
+import { toIso } from './dates.js';
 import { isSnsKey, normalizeSnsLink } from './sns-links.js';
 import { buildThanksMail, sendMail } from './mail.js';
 

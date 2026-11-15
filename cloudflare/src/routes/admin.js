@@ -4,7 +4,6 @@ import { normalizeEmail } from '../lib/credentials.js';
 import { getAdmin, getMember, logAdminAction } from '../lib/db.js';
 import { isBlockedAdmin } from '../lib/admin-policy.js';
 import { buildAdminInviteMail, sendMail } from '../lib/mail.js';
-import { syncResponses } from '../lib/sync.js';
 import { currentMember, isCrossSite, json } from './http.js';
 
 const VISIBILITIES = ['public', 'members', 'hidden'];
@@ -189,11 +188,6 @@ export async function handleAdmin(request, env, path, body) {
   let m;
 
   if (method === 'GET' && path === 'overview') return overview(env, admin);
-  if (method === 'POST' && path === 'sync') {
-    const result = await syncResponses(env);
-    await logAdminAction(env.DB, admin.email, 'sync', null, `新規 ${result.imported} 件 / お礼メール ${result.mailed} 件`);
-    return json(result);
-  }
   if (method === 'POST' && (m = path.match(/^profiles\/(\d+)$/))) return updateProfile(env, admin, Number(m[1]), body);
   if (method === 'POST' && (m = path.match(/^members\/(\d+)$/))) return updateMember(env, admin, Number(m[1]), body);
   if (method === 'POST' && (m = path.match(/^questions\/([a-z][a-z0-9_]*)$/))) return updateQuestion(env, admin, m[1], body);

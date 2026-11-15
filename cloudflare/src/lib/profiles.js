@@ -1,7 +1,7 @@
 // プロフィールを画面用の形 { id, title, photo, items: [{ label, value }] } に組み立てる
 // 公開してよい設問(questions.is_public = 1)しか含めない
 import { photoUrl } from './photos.js';
-import { formatBirthDate } from './sheet-rows.js';
+import { formatBirthDate } from './dates.js';
 import { isSnsKey } from './sns-links.js';
 
 const SELECT_PROFILES = `

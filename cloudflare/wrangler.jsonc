@@ -30,19 +30,13 @@
     }
   ],
 
-  // フォームの新しい回答を10分おきに取り込む
+  // 10分おきに、期限切れのコードの掃除と、送れなかったお礼メールの再送を行う
   "triggers": { "crons": ["*/10 * * * *"] },
 
-  // 秘密でない設定。秘密(SESSION_SECRET, GMAIL_USER, GMAIL_APP_PASSWORD, GOOGLE_SERVICE_ACCOUNT)は wrangler secret put で入れる
+  // 秘密でない設定。秘密(SESSION_SECRET, GMAIL_USER, GMAIL_APP_PASSWORD)は wrangler secret put で入れる
   "vars": {
-    // Googleフォームの回答の取り込み。自前アンケートに移ったら "off" にする(移行のあいだだけ "on")
-    "SHEET_SYNC": "on",
-    "SHEET_ID": "1F3uJVYtRY94kgKbKkEQhZo49hf_nf5TP40hxSp0ZsFY",
-    "SHEET_RANGE": "'Form Responses 1'!A1:ZZ",
     "MAIL_SENDER_NAME": "95s PRIDE",
     "MAIL_FROM": "95spride.official@gmail.com",
-    "MAIL_REPLY_TO": "95spride.official@gmail.com",
-    // これより前の回答には、お礼メールを送らない(旧 GAS が送っていた分)。2026-11-15 に GAS のトリガーを削除し、以後は新サイトが送る
-    "THANKS_MAIL_SINCE": "2026-11-15T05:00:00+09:00"
+    "MAIL_REPLY_TO": "95spride.official@gmail.com"
   }
 }

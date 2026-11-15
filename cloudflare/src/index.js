@@ -5,7 +5,6 @@ import { handleAdmin } from './routes/admin.js';
 import { servePhoto } from './routes/photos.js';
 import { surveyQuestions, surveySendCode, surveySubmit, surveyVerify } from './routes/survey.js';
 import { json, readJson } from './routes/http.js';
-import { syncResponses } from './lib/sync.js';
 import { retryThanksMails } from './lib/thanks-retry.js';
 import { cleanupExpired } from './lib/db.js';
 
@@ -72,21 +71,12 @@ export default {
     }
   },
 
-  // 定期実行: 期限切れのコードなどの掃除、送れなかったお礼メールの再送、(移行中のあいだだけ)Googleフォームの回答の取り込み
+  // 定期実行: 期限切れのコードなどの掃除と、送れなかったお礼メールの再送
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
       await cleanupExpired(env.DB);
       const resent = await retryThanksMails(env);
       if (resent) console.log(`お礼メールを ${resent} 件再送しました`);
-      // Googleフォームをやめたら、wrangler.jsonc の SHEET_SYNC を "off" にする(取り込みの仕組みごと、あとで削除する)
-      if (env.SHEET_SYNC === 'off') return;
-      // サービスアカウントが未登録のうちは取り込みを行わない(設定前にエラーを出し続けないため)
-      if (!env.GOOGLE_SERVICE_ACCOUNT) {
-        console.warn('GOOGLE_SERVICE_ACCOUNT が未登録のため、フォーム回答の取り込みを飛ばしました');
-        return;
-      }
-      const summary = await syncResponses(env);
-      console.log('フォーム回答の取り込み:', JSON.stringify(summary));
     })());
   },
 };
